@@ -209,36 +209,34 @@ export async function POST(request: NextRequest, context: RouteContext) {
   }
 
   const responseId = `${eventId}_${guestId}`;
-  const existingResponse = await getFirestoreDocument({
-    idToken: authUser.idToken,
-    collection: "responses",
-    documentId: responseId
-  });
-
-  if (existingResponse) {
-    return NextResponse.json(
-      { message: "この招待者の回答は既に登録されています。修正から更新してください。" },
-      { status: 409 }
-    );
-  }
-
   const now = new Date().toISOString();
-  await createFirestoreDocument({
-    idToken: authUser.idToken,
-    collection: "responses",
-    documentId: responseId,
-    fields: createResponseFields({
-      responseId,
-      planId: event.planId,
-      eventId,
-      guestId,
-      ownerUid: authUser.uid,
-      attendanceStatus: validation.attendanceStatus,
-      comment: validation.comment,
-      lastUpdatedByUid: authUser.uid,
-      now
-    })
-  });
+  try {
+    await createFirestoreDocument({
+      idToken: authUser.idToken,
+      collection: "responses",
+      documentId: responseId,
+      fields: createResponseFields({
+        responseId,
+        planId: event.planId,
+        eventId,
+        guestId,
+        ownerUid: authUser.uid,
+        attendanceStatus: validation.attendanceStatus,
+        comment: validation.comment,
+        lastUpdatedByUid: authUser.uid,
+        now
+      })
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("409")) {
+      return NextResponse.json(
+        { message: "この招待者の回答は既に登録されています。修正から更新してください。" },
+        { status: 409 }
+      );
+    }
+
+    throw error;
+  }
   await createFirestoreDocument({
     idToken: authUser.idToken,
     collection: "auditLogs",
