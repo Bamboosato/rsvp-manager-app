@@ -118,6 +118,7 @@ function EventDetail({ eventId }: { eventId: string }) {
 
   async function handleAddResponse(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const form = event.currentTarget;
 
     if (isAddResponseSubmittingRef.current) {
       return;
@@ -130,7 +131,7 @@ function EventDetail({ eventId }: { eventId: string }) {
 
     isAddResponseSubmittingRef.current = true;
 
-    const formData = new FormData(event.currentTarget);
+    const formData = new FormData(form);
     const payload = {
       nickname: String(formData.get("nickname") ?? ""),
       pin: String(formData.get("pin") ?? ""),
@@ -165,7 +166,7 @@ function EventDetail({ eventId }: { eventId: string }) {
         return;
       }
 
-      event.currentTarget.reset();
+      form.reset();
       setNotice("回答を代理追加しました。");
       await loadDetail();
     } catch {
