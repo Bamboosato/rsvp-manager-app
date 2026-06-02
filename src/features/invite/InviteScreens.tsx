@@ -1,10 +1,21 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 
 type AttendanceStatus = "yes" | "maybe" | "no";
+
+const attendanceChoices: Array<{
+  status: AttendanceStatus;
+  iconSrc: string;
+  label: string;
+}> = [
+  { status: "yes", iconSrc: "/icons/attendance-yes.svg", label: "参加" },
+  { status: "maybe", iconSrc: "/icons/attendance-maybe.svg", label: "未定" },
+  { status: "no", iconSrc: "/icons/attendance-no.svg", label: "不参加" }
+];
 
 type PublicPlan = {
   name: string;
@@ -45,7 +56,7 @@ type AnswerState = Record<
 export function InviteStartScreen({ publicToken }: { publicToken: string }) {
   const router = useRouter();
   const [plan, setPlan] = useState<PublicPlan | null>(null);
-  const [password, setPassword] = useState("");
+  const [accessCode, setAccessCode] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -62,18 +73,24 @@ export function InviteStartScreen({ publicToken }: { publicToken: string }) {
   async function handlePasswordSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
+
+    if (!/^\d{6,12}$/.test(accessCode.trim())) {
+      setError("アクセスコードは6〜12桁の数字で入力してください。");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
       const response = await fetch(`/api/invite/${publicToken}/password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password })
+        body: JSON.stringify({ accessCode: accessCode.trim() })
       });
       const result = (await response.json().catch(() => null)) as { message?: string } | null;
 
       if (!response.ok) {
-        setError(result?.message ?? "プランパスワードが正しくありません。");
+        setError(result?.message ?? "アクセスコードが正しくありません。");
         return;
       }
 
@@ -109,15 +126,19 @@ export function InviteStartScreen({ publicToken }: { publicToken: string }) {
         {plan.hasPassword ? (
           <form className="form-stack top-message" onSubmit={handlePasswordSubmit}>
             <label className="field">
-              <span>プランパスワード</span>
+              <span>アクセスコード</span>
               <input
                 autoComplete="current-password"
                 disabled={isSubmitting}
-                onChange={(event) => setPassword(event.target.value)}
+                inputMode="numeric"
+                maxLength={12}
+                onChange={(event) => setAccessCode(event.target.value)}
+                pattern="[0-9]*"
                 required
-                type="password"
-                value={password}
+                type="text"
+                value={accessCode}
               />
+              <span className="field-hint">6〜12桁の数字</span>
             </label>
             {error ? <p className="error-message">{error}</p> : null}
             <button className="primary-button full-width" disabled={isSubmitting} type="submit">
@@ -465,8 +486,12 @@ export function InviteCompleteScreen({ publicToken }: { publicToken: string }) {
         <p className="eyebrow">Complete</p>
         <h1>出欠入力が完了しました。</h1>
         <div className="notice-message top-message">
-          <p>再編集する場合は、管理者から共有されたURLから再度アクセスしてください。</p>
-          <p>締切後に出欠を変更する場合は管理者にご連絡ください。</p>
+          <p>
+            再編集する場合、初回入力時と同じニックネーム、PINで共有URLから再度アクセスしてください。
+          </p>
+          <p>
+            締切後に出欠を変更する場合、画面から変更できませんので管理者に直接ご連絡ください。
+          </p>
         </div>
       </section>
 
@@ -530,25 +555,28 @@ function InviteEventCard({
       ) : null}
 
       <div className="invite-choice-row" aria-label="出欠">
-        {(["yes", "maybe", "no"] as const).map((status) => (
+        {attendanceChoices.map((choice) => (
           <button
-            aria-pressed={answer.attendanceStatus === status}
+            aria-label={choice.label}
+            aria-pressed={answer.attendanceStatus === choice.status}
             className={
-              answer.attendanceStatus === status
+              answer.attendanceStatus === choice.status
                 ? "choice-button selected"
                 : "choice-button"
             }
             disabled={disabled || isClosed}
-            key={status}
+            key={choice.status}
             onClick={() =>
               onChange({
                 ...answer,
-                attendanceStatus: status
+                attendanceStatus: choice.status
               })
             }
             type="button"
           >
-            {getAttendanceLabel(status)}
+            <span className="choice-button-icon" aria-hidden="true">
+              <Image alt="" height={32} src={choice.iconSrc} unoptimized width={32} />
+            </span>
           </button>
         ))}
       </div>

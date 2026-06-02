@@ -10,6 +10,7 @@ type RouteContext = {
 };
 
 type PasswordRequest = {
+  accessCode?: unknown;
   password?: unknown;
 };
 
@@ -44,11 +45,16 @@ export async function POST(request: NextRequest, context: RouteContext) {
     }
 
     const body = (await request.json().catch(() => null)) as PasswordRequest | null;
-    const password = typeof body?.password === "string" ? body.password : "";
+    const accessCode =
+      typeof body?.accessCode === "string"
+        ? body.accessCode.trim()
+        : typeof body?.password === "string"
+          ? body.password.trim()
+          : "";
 
-    if (!password || !verifySecret(password, plan.passwordHash)) {
+    if (!/^\d{6,12}$/.test(accessCode) || !verifySecret(accessCode, plan.passwordHash)) {
       return NextResponse.json(
-        { message: "プランパスワードが正しくありません。" },
+        { message: "アクセスコードが正しくありません。" },
         { status: 401 }
       );
     }

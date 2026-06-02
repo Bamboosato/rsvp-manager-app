@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">RSVP Hub icon concept 3</title>
+  <desc id="desc">A compact H-shaped hub symbol with attendance dots for an app launcher icon.</desc>
+  <rect width="512" height="512" rx="112" fill="#f7f8fa" />
+  <rect x="40" y="40" width="432" height="432" rx="88" fill="#ffffff" stroke="#d9dee5" stroke-width="18" />
+  <path d="M168 164V348M344 164V348M168 256H344" stroke="#2563eb" stroke-width="52" stroke-linecap="round" stroke-linejoin="round" />
+  <circle cx="168" cy="164" r="34" fill="#17202a" />
+  <circle cx="344" cy="164" r="34" fill="#17202a" />
+  <circle cx="168" cy="348" r="34" fill="#687385" />
+  <circle cx="344" cy="348" r="34" fill="#687385" />
+  <circle cx="256" cy="256" r="26" fill="#ffffff" />
+</svg>

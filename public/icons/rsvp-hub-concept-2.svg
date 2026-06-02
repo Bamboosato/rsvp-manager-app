@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">RSVP Hub icon concept 2</title>
+  <desc id="desc">A calm dashboard-grid mark representing grouped events and response aggregation.</desc>
+  <rect width="512" height="512" rx="112" fill="#17202a" />
+  <rect x="104" y="112" width="304" height="288" rx="48" fill="#ffffff" />
+  <rect x="142" y="156" width="228" height="40" rx="20" fill="#2563eb" />
+  <rect x="142" y="234" width="90" height="90" rx="22" fill="#dbeafe" />
+  <rect x="280" y="234" width="90" height="90" rx="22" fill="#f1f3f5" />
+  <rect x="142" y="346" width="228" height="18" rx="9" fill="#d9dee5" />
+  <circle cx="187" cy="279" r="23" fill="none" stroke="#2563eb" stroke-width="14" />
+  <path d="M312 292 338 266M338 292 312 266" stroke="#17202a" stroke-width="14" stroke-linecap="round" />
+  <circle cx="256" cy="400" r="32" fill="#2563eb" />
+  <circle cx="256" cy="400" r="12" fill="#ffffff" />
+</svg>

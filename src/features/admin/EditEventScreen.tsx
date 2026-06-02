@@ -136,7 +136,7 @@ function EditEventForm({
         place,
         status
       });
-      router.push(`/admin/plans/${plan.id}/events/${eventDetail.id}`);
+      router.push(`/admin/plans/${plan.id}`);
     } catch {
       setError("イベントの更新に失敗しました。");
     } finally {
@@ -183,10 +183,7 @@ function EditEventForm({
             <span> / </span>
             <Link href={`/admin/plans/${plan.id}`}>{plan.name}</Link>
             <span> / </span>
-            <Link href={`/admin/plans/${plan.id}/events/${eventDetail.id}`}>
-              {getEventTitle(eventDetail)}
-            </Link>
-            <span> / イベント編集</span>
+            <span>イベント編集</span>
           </p>
           <h1>イベント編集</h1>
           <p className="muted-text">
@@ -196,9 +193,9 @@ function EditEventForm({
         </div>
         <Link
           className="secondary-button button-link"
-          href={`/admin/plans/${plan.id}/events/${eventDetail.id}`}
+          href={`/admin/plans/${plan.id}`}
         >
-          イベント詳細へ戻る
+          イベント一覧へ戻る
         </Link>
       </header>
 
@@ -283,7 +280,7 @@ function EditEventForm({
             </button>
             <Link
               className="secondary-button button-link"
-              href={`/admin/plans/${plan.id}/events/${eventDetail.id}`}
+              href={`/admin/plans/${plan.id}`}
             >
               キャンセル
             </Link>
@@ -326,8 +323,4 @@ function validateEventInput(input: {
   }
 
   return { ok: true };
-}
-
-function getEventTitle(event: AdminEvent) {
-  return event.name || "イベント名未設定";
 }

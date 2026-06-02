@@ -1,4 +1,4 @@
-# RSVP Manager App
+# RSVP Hub
 
 イベント参加者調整AppのMVP実装リポジトリです。
 
