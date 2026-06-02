@@ -1,18 +1,19 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useEffect } from "react";
 import { useAuth } from "./AuthProvider";
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { isConfigured, isLoading, user } = useAuth();
 
   useEffect(() => {
     if (isConfigured && !isLoading && !user) {
-      router.replace("/login?next=/admin/plans");
+      router.replace(`/login?next=${encodeURIComponent(pathname)}`);
     }
-  }, [isConfigured, isLoading, router, user]);
+  }, [isConfigured, isLoading, pathname, router, user]);
 
   if (!isConfigured) {
     return (

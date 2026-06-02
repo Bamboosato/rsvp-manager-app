@@ -1,0 +1,142 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function ownsExisting() {
+      return signedIn() && resource.data.ownerUid == request.auth.uid;
+    }
+
+    function ownsIncoming() {
+      return signedIn() && request.resource.data.ownerUid == request.auth.uid;
+    }
+
+    function validString(value, maxLength) {
+      return value is string && value.size() > 0 && value.size() <= maxLength;
+    }
+
+    function validNullableString(value, maxLength) {
+      return value == null || value is string && value.size() <= maxLength;
+    }
+
+    function validPlanData() {
+      return request.resource.data.keys().hasOnly([
+          'planId',
+          'ownerUid',
+          'name',
+          'yearMonth',
+          'passwordHash',
+          'publicToken',
+          'isActive',
+          'createdAt',
+          'updatedAt'
+        ])
+        && validString(request.resource.data.planId, 80)
+        && request.resource.data.ownerUid == request.auth.uid
+        && validString(request.resource.data.name, 80)
+        && request.resource.data.yearMonth.matches('^\\d{4}-(0[1-9]|1[0-2])$')
+        && validNullableString(request.resource.data.passwordHash, 240)
+        && validString(request.resource.data.publicToken, 80)
+        && request.resource.data.isActive is bool
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.updatedAt is timestamp;
+    }
+
+    function validEventAdminProfile(uid) {
+      return request.resource.data.keys().hasOnly([
+          'uid',
+          'email',
+          'displayName',
+          'isActive',
+          'createdAt',
+          'updatedAt'
+        ])
+        && request.resource.data.uid == uid
+        && validNullableString(request.resource.data.email, 240)
+        && validNullableString(request.resource.data.displayName, 120)
+        && request.resource.data.isActive is bool
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.updatedAt is timestamp;
+    }
+
+    function validOwnedIncomingDocument() {
+      return ownsIncoming()
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.updatedAt is timestamp;
+    }
+
+    match /eventAdmins/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow create: if signedIn()
+        && request.auth.uid == uid
+        && validEventAdminProfile(uid);
+      allow update: if signedIn()
+        && request.auth.uid == uid
+        && resource.data.uid == uid
+        && validEventAdminProfile(uid);
+      allow delete: if false;
+    }
+
+    match /plans/{planId} {
+      allow read: if ownsExisting();
+      allow create: if ownsIncoming()
+        && request.resource.data.planId == planId
+        && validPlanData();
+      allow update: if ownsExisting()
+        && ownsIncoming()
+        && request.resource.data.planId == resource.data.planId
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.publicToken == resource.data.publicToken
+        && request.resource.data.createdAt == resource.data.createdAt
+        && validPlanData();
+      allow delete: if false;
+    }
+
+    match /events/{eventId} {
+      allow read: if ownsExisting();
+      allow create: if validOwnedIncomingDocument();
+      allow update: if ownsExisting()
+        && ownsIncoming()
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if false;
+    }
+
+    match /guests/{guestId} {
+      allow read, write: if false;
+    }
+
+    match /responses/{responseId} {
+      allow read: if ownsExisting();
+      allow create: if validOwnedIncomingDocument();
+      allow update: if ownsExisting()
+        && ownsIncoming()
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if false;
+    }
+
+    match /notificationTokens/{tokenId} {
+      allow read: if ownsExisting();
+      allow create: if validOwnedIncomingDocument();
+      allow update: if ownsExisting()
+        && ownsIncoming()
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if false;
+    }
+
+    match /auditLogs/{auditLogId} {
+      allow read: if ownsExisting();
+      allow create: if validOwnedIncomingDocument();
+      allow update, delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

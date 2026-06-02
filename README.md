@@ -40,6 +40,14 @@ npm run lint
 npm run build
 ```
 
+## Firebase
+
+Firestore Rules and indexes are managed in this repository.
+
+```bash
+npx firebase deploy --only firestore:rules,firestore:indexes
+```
+
 ## Documents
 
 - `docs/mvp-requirements.md`
@@ -48,4 +56,4 @@ npm run build
 
 ## Current Scope
 
-The current implementation is the initial Next.js foundation, Firebase Authentication entry points, and a static UI baseline for the business-app style dashboard. Firestore persistence, invitation flows, and push notifications will be implemented in later steps.
+The current implementation includes the Next.js foundation, Firebase Authentication entry points, Firestore-backed plan listing, plan creation, and plan disabling. Event management, invitation flows, and push notifications will be implemented in later steps.

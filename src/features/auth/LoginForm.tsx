@@ -15,7 +15,10 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const nextPath = searchParams.get("next") || "/admin/plans";
+  const requestedNextPath = searchParams.get("next");
+  const nextPath = requestedNextPath?.startsWith("/")
+    ? requestedNextPath
+    : "/admin/plans";
 
   useEffect(() => {
     if (user) {

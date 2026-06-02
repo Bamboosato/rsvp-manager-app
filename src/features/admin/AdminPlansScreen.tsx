@@ -1,69 +1,116 @@
 "use client";
 
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
+import { getFirebaseClientFirestore } from "@/lib/firebase/client";
+import {
+  disablePlan,
+  ensureEventAdminProfile,
+  formatDateTime,
+  formatYearMonth,
+  subscribeOwnerPlans,
+  type AdminPlan
+} from "./plans/data";
 
-const samplePlans = [
-  {
-    name: "2026年06月 練習会",
-    month: "2026年06月",
-    status: "有効",
-    events: 4,
-    yes: 18,
-    maybe: 6,
-    no: 3
-  },
-  {
-    name: "2026年07月 交流会",
-    month: "2026年07月",
-    status: "有効",
-    events: 2,
-    yes: 11,
-    maybe: 4,
-    no: 2
-  }
-];
-
-const sampleEvents = [
-  {
-    date: "2026/06/06",
-    slot: "AM",
-    name: "定例練習",
-    place: "中央コート",
-    status: "受付中",
-    yes: 10,
-    maybe: 3,
-    no: 1
-  },
-  {
-    date: "2026/06/13",
-    slot: "PM",
-    name: "ゲーム練習",
-    place: "東コート",
-    status: "締切済",
-    yes: 8,
-    maybe: 3,
-    no: 2
-  }
-];
+const maxActivePlans = 3;
 
 export function AdminPlansScreen() {
   return (
     <ProtectedRoute>
-      <AdminDashboard />
+      <AdminPlansDashboard />
     </ProtectedRoute>
   );
 }
 
-function AdminDashboard() {
+function AdminPlansDashboard() {
   const { signOut, user } = useAuth();
+  const db = useMemo(() => getFirebaseClientFirestore(), []);
+  const [plans, setPlans] = useState<AdminPlan[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [disablingPlanId, setDisablingPlanId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!db || !user) {
+      return undefined;
+    }
+
+    ensureEventAdminProfile(db, {
+      uid: user.uid,
+      email: user.email,
+      displayName: user.displayName
+    }).catch(() => {
+      setError("イベント管理者情報の初期化に失敗しました。");
+    });
+
+    return subscribeOwnerPlans({
+      db,
+      ownerUid: user.uid,
+      onPlans: (nextPlans) => {
+        setPlans(nextPlans);
+        setIsLoading(false);
+      },
+      onError: () => {
+        setError("プラン一覧の取得に失敗しました。");
+        setIsLoading(false);
+      }
+    });
+  }, [db, user]);
+
+  const activePlans = plans.filter((plan) => plan.isActive);
+  const inactivePlans = plans.filter((plan) => !plan.isActive);
+  const canCreatePlan = activePlans.length < maxActivePlans;
+
+  async function handleCopyInviteUrl(plan: AdminPlan) {
+    setError("");
+    setNotice("");
+
+    if (!plan.isActive) {
+      setError("無効化済みプランのURLは共有できません。");
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(buildInviteUrl(plan.publicToken));
+      setNotice("配信用URLをコピーしました。");
+    } catch {
+      setError("URLコピーに失敗しました。ブラウザの設定を確認してください。");
+    }
+  }
+
+  async function handleDisablePlan(plan: AdminPlan) {
+    setError("");
+    setNotice("");
+
+    const confirmed = window.confirm(
+      `「${plan.name}」を無効化します。招待者はこの配信用URLから回答できなくなります。`
+    );
+
+    if (!confirmed || !db) {
+      return;
+    }
+
+    setDisablingPlanId(plan.id);
+
+    try {
+      await disablePlan(db, plan.id);
+      setNotice("プランを無効化しました。");
+    } catch {
+      setError("プランの無効化に失敗しました。");
+    } finally {
+      setDisablingPlanId(null);
+    }
+  }
 
   return (
     <main className="app-shell">
       <header className="top-bar">
         <div>
           <p className="eyebrow">RSVP Manager</p>
-          <h1>出欠管理ダッシュボード</h1>
+          <h1>プラン一覧</h1>
           <p className="muted-text">{user?.email}</p>
         </div>
         <div className="header-actions">
@@ -76,24 +123,48 @@ function AdminDashboard() {
         </div>
       </header>
 
-      <section className="summary-grid" aria-label="出欠サマリー">
-        <SummaryCard label="参加" value={29} tone="yes" />
-        <SummaryCard label="未定" value={10} tone="maybe" />
-        <SummaryCard label="不参加" value={5} tone="no" />
+      <section className="summary-grid" aria-label="プランサマリー">
+        <SummaryCard label="有効プラン" value={`${activePlans.length} / ${maxActivePlans}`} />
+        <SummaryCard label="無効プラン" value={String(inactivePlans.length)} />
+        <SummaryCard label="全プラン" value={String(plans.length)} />
       </section>
 
-      <section className="workspace-grid">
-        <section className="panel" aria-labelledby="plans-heading">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">Plans</p>
-              <h2 id="plans-heading">プラン一覧</h2>
-            </div>
-            <button className="primary-button" type="button">
+      <section className="panel" aria-labelledby="plans-heading">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Plans</p>
+            <h2 id="plans-heading">プラン一覧</h2>
+          </div>
+          {canCreatePlan ? (
+            <Link className="primary-button button-link" href="/admin/plans/new">
+              プラン追加
+            </Link>
+          ) : (
+            <button className="primary-button" disabled type="button">
               プラン追加
             </button>
-          </div>
+          )}
+        </div>
 
+        {!canCreatePlan ? (
+          <p className="notice-message top-message">
+            有効プランは最大3件までです。不要なプランを無効化すると追加できます。
+          </p>
+        ) : null}
+
+        {notice ? <p className="success-message top-message">{notice}</p> : null}
+        {error ? <p className="error-message top-message">{error}</p> : null}
+
+        {isLoading ? (
+          <p className="empty-state">プラン一覧を読み込んでいます。</p>
+        ) : plans.length === 0 ? (
+          <div className="empty-state">
+            <p>まだプランがありません。</p>
+            <Link className="primary-button button-link" href="/admin/plans/new">
+              最初のプランを追加
+            </Link>
+          </div>
+        ) : (
           <div className="table-wrap">
             <table>
               <thead>
@@ -101,148 +172,71 @@ function AdminDashboard() {
                   <th>プラン名</th>
                   <th>年月</th>
                   <th>状態</th>
-                  <th>イベント</th>
-                  <th>出欠</th>
+                  <th>イベント数</th>
+                  <th>パスワード</th>
+                  <th>配信用URL</th>
+                  <th>作成日時</th>
+                  <th>操作</th>
                 </tr>
               </thead>
               <tbody>
-                {samplePlans.map((plan) => (
-                  <tr key={plan.name}>
+                {plans.map((plan) => (
+                  <tr key={plan.id}>
                     <td className="strong-cell">{plan.name}</td>
-                    <td>{plan.month}</td>
+                    <td>{formatYearMonth(plan.yearMonth)}</td>
                     <td>
-                      <span className="status-badge">{plan.status}</span>
-                    </td>
-                    <td>{plan.events}</td>
-                    <td>
-                      <AttendanceBadges
-                        yes={plan.yes}
-                        maybe={plan.maybe}
-                        no={plan.no}
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section className="panel" aria-labelledby="events-heading">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">Events</p>
-              <h2 id="events-heading">イベント一覧</h2>
-            </div>
-            <button className="secondary-button" type="button">
-              URLコピー
-            </button>
-          </div>
-
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>日程</th>
-                  <th>時間帯</th>
-                  <th>イベント</th>
-                  <th>場所</th>
-                  <th>状態</th>
-                  <th>出欠</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sampleEvents.map((event) => (
-                  <tr key={`${event.date}-${event.slot}`}>
-                    <td>{event.date}</td>
-                    <td>{event.slot}</td>
-                    <td className="strong-cell">{event.name}</td>
-                    <td>{event.place}</td>
-                    <td>
-                      <span
-                        className={
-                          event.status === "受付中"
-                            ? "status-badge"
-                            : "status-badge muted"
-                        }
-                      >
-                        {event.status}
+                      <span className={plan.isActive ? "status-badge" : "status-badge muted"}>
+                        {plan.isActive ? "有効" : "無効"}
                       </span>
                     </td>
+                    <td>0</td>
+                    <td>{plan.hasPassword ? "設定済み" : "未設定"}</td>
                     <td>
-                      <AttendanceBadges
-                        yes={event.yes}
-                        maybe={event.maybe}
-                        no={event.no}
-                      />
+                      <button
+                        className="secondary-button compact-button"
+                        disabled={!plan.isActive}
+                        onClick={() => handleCopyInviteUrl(plan)}
+                        type="button"
+                      >
+                        コピー
+                      </button>
+                    </td>
+                    <td>{formatDateTime(plan.createdAt)}</td>
+                    <td>
+                      <div className="row-actions">
+                        <button className="secondary-button compact-button" disabled type="button">
+                          詳細
+                        </button>
+                        <button
+                          className="danger-button compact-button"
+                          disabled={!plan.isActive || disablingPlanId === plan.id}
+                          onClick={() => handleDisablePlan(plan)}
+                          type="button"
+                        >
+                          {disablingPlanId === plan.id ? "処理中" : "無効化"}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </section>
-      </section>
-
-      <section className="guest-preview" aria-labelledby="guest-heading">
-        <div>
-          <p className="eyebrow">Guest View</p>
-          <h2 id="guest-heading">招待者入力UIの基準</h2>
-        </div>
-        <div className="guest-card">
-          <div>
-            <p className="event-date">2026/06/06 AM</p>
-            <h3>定例練習</h3>
-            <p className="muted-text">中央コート</p>
-          </div>
-          <div className="choice-row" aria-label="出欠選択">
-            <button className="choice-button selected" type="button">
-              ○
-            </button>
-            <button className="choice-button" type="button">
-              △
-            </button>
-            <button className="choice-button" type="button">
-              ×
-            </button>
-          </div>
-        </div>
+        )}
       </section>
     </main>
   );
 }
 
-function SummaryCard({
-  label,
-  value,
-  tone
-}: {
-  label: string;
-  value: number;
-  tone: "yes" | "maybe" | "no";
-}) {
+function SummaryCard({ label, value }: { label: string; value: string }) {
   return (
-    <article className={`summary-card ${tone}`}>
+    <article className="summary-card">
       <span>{label}</span>
       <strong>{value}</strong>
     </article>
   );
 }
 
-function AttendanceBadges({
-  yes,
-  maybe,
-  no
-}: {
-  yes: number;
-  maybe: number;
-  no: number;
-}) {
-  return (
-    <div className="attendance-badges" aria-label="出欠人数">
-      <span>○ {yes}</span>
-      <span>△ {maybe}</span>
-      <span>× {no}</span>
-    </div>
-  );
+function buildInviteUrl(publicToken: string) {
+  return `${window.location.origin}/invite/${publicToken}`;
 }

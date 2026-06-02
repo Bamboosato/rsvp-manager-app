@@ -1,5 +1,6 @@
 import { getApp, getApps, initializeApp, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
+import { getFirestore, type Firestore } from "firebase/firestore";
 
 type FirebaseClientConfig = {
   apiKey: string | undefined;
@@ -34,4 +35,9 @@ export function getFirebaseClientApp(): FirebaseApp | null {
 export function getFirebaseClientAuth(): Auth | null {
   const app = getFirebaseClientApp();
   return app ? getAuth(app) : null;
+}
+
+export function getFirebaseClientFirestore(): Firestore | null {
+  const app = getFirebaseClientApp();
+  return app ? getFirestore(app) : null;
 }
