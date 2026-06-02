@@ -465,7 +465,7 @@ export function InviteCompleteScreen({ publicToken }: { publicToken: string }) {
         <p className="eyebrow">Complete</p>
         <h1>出欠入力が完了しました。</h1>
         <div className="notice-message top-message">
-          <p>再編集する場合は、同一URLからアクセスしてください。</p>
+          <p>再編集する場合は、管理者から共有されたURLから再度アクセスしてください。</p>
           <p>締切後に出欠を変更する場合は管理者にご連絡ください。</p>
         </div>
       </section>
