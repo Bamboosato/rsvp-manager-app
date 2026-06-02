@@ -361,6 +361,14 @@ function EventDetail({ eventId }: { eventId: string }) {
             <dd>{detail.event.place}</dd>
           </div>
         </dl>
+        <div className="row-actions">
+          <Link
+            className="secondary-button button-link"
+            href={`/admin/plans/${detail.event.planId}/events/${detail.event.id}/edit`}
+          >
+            イベント編集
+          </Link>
+        </div>
       </section>
 
       {notice ? <p className="success-message top-message">{notice}</p> : null}

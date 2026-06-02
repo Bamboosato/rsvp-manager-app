@@ -258,6 +258,12 @@ function PlanDetail({ planId }: { planId: string }) {
           </div>
         </dl>
         <div className="row-actions">
+          <Link
+            className="secondary-button button-link"
+            href={`/admin/plans/${plan.id}/edit`}
+          >
+            プラン編集
+          </Link>
           <button
             className="secondary-button"
             disabled={!plan.isActive}
@@ -357,6 +363,12 @@ function PlanDetail({ planId }: { planId: string }) {
                           href={`/admin/plans/${plan.id}/events/${event.id}`}
                         >
                           詳細
+                        </Link>
+                        <Link
+                          className="secondary-button compact-button button-link"
+                          href={`/admin/plans/${plan.id}/events/${event.id}/edit`}
+                        >
+                          編集
                         </Link>
                         <button
                           className="secondary-button compact-button"

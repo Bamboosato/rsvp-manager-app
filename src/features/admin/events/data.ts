@@ -1,6 +1,7 @@
 import {
   collection,
   doc,
+  onSnapshot as onDocumentSnapshot,
   onSnapshot,
   orderBy,
   query,
@@ -9,6 +10,7 @@ import {
   updateDoc,
   where,
   type DocumentData,
+  type DocumentSnapshot,
   type Firestore,
   type QueryDocumentSnapshot,
   type Timestamp,
@@ -41,6 +43,15 @@ export type CreateEventInput = {
   eventDate: string;
   timeSlot: EventTimeSlot;
   place: string;
+};
+
+export type UpdateEventInput = {
+  eventId: string;
+  name: string;
+  eventDate: string;
+  timeSlot: EventTimeSlot;
+  place: string;
+  status: EventStatus;
 };
 
 export function subscribeOwnerEvents({
@@ -104,6 +115,36 @@ export function subscribePlanEvents({
   );
 }
 
+export function subscribeOwnerEvent({
+  db,
+  ownerUid,
+  eventId,
+  onEvent,
+  onError
+}: {
+  db: Firestore;
+  ownerUid: string;
+  eventId: string;
+  onEvent: (event: AdminEvent | null) => void;
+  onError: (error: Error) => void;
+}): Unsubscribe {
+  return onDocumentSnapshot(
+    doc(db, "events", eventId),
+    (snapshot) => {
+      if (!snapshot.exists()) {
+        onEvent(null);
+        return;
+      }
+
+      const event = mapEventSnapshot(snapshot);
+      onEvent(event.ownerUid === ownerUid ? event : null);
+    },
+    (error) => {
+      onError(error);
+    }
+  );
+}
+
 export async function createEvent(db: Firestore, input: CreateEventInput) {
   const eventRef = doc(collection(db, "events"));
 
@@ -140,6 +181,17 @@ export async function updateEventStatus({
   });
 }
 
+export async function updateEventDetails(db: Firestore, input: UpdateEventInput) {
+  await updateDoc(doc(db, "events", input.eventId), {
+    name: input.name.trim(),
+    eventDate: input.eventDate,
+    timeSlot: input.timeSlot,
+    place: input.place.trim(),
+    status: input.status,
+    updatedAt: serverTimestamp()
+  });
+}
+
 export async function disableEvent(db: Firestore, eventId: string) {
   await updateDoc(doc(db, "events", eventId), {
     isActive: false,
@@ -165,8 +217,10 @@ export function getNextEventStatus(status: EventStatus): EventStatus {
   return status === "accepting" ? "closed" : "accepting";
 }
 
-function mapEventSnapshot(snapshot: QueryDocumentSnapshot<DocumentData>): AdminEvent {
-  const data = snapshot.data();
+function mapEventSnapshot(
+  snapshot: DocumentSnapshot<DocumentData> | QueryDocumentSnapshot<DocumentData>
+): AdminEvent {
+  const data = snapshot.data() ?? {};
 
   return {
     id: snapshot.id,

@@ -237,6 +237,12 @@ function AdminPlansDashboard() {
                         >
                           詳細
                         </Link>
+                        <Link
+                          className="secondary-button compact-button button-link"
+                          href={`/admin/plans/${plan.id}/edit`}
+                        >
+                          編集
+                        </Link>
                         <button
                           className="danger-button compact-button"
                           disabled={!plan.isActive || disablingPlanId === plan.id}
