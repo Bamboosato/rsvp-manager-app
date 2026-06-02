@@ -20,6 +20,8 @@ type RouteContext = {
 type UpdatePlanRequest = {
   name?: unknown;
   yearMonth?: unknown;
+  accessCode?: unknown;
+  clearAccessCode?: unknown;
   password?: unknown;
   clearPassword?: unknown;
 };
@@ -56,10 +58,10 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     updatedAt: toFirestoreTimestamp(now)
   };
 
-  if (validation.clearPassword) {
+  if (validation.clearAccessCode) {
     fields.passwordHash = toFirestoreNullableString(null);
-  } else if (validation.password) {
-    fields.passwordHash = toFirestoreString(hashSecret(validation.password));
+  } else if (validation.accessCode) {
+    fields.passwordHash = toFirestoreString(hashSecret(validation.accessCode));
   }
 
   try {
@@ -82,8 +84,8 @@ function validateUpdatePlanRequest(body: UpdatePlanRequest | null):
       ok: true;
       name: string;
       yearMonth: string;
-      password: string | null;
-      clearPassword: boolean;
+      accessCode: string | null;
+      clearAccessCode: boolean;
     }
   | { ok: false; message: string } {
   if (!body) {
@@ -92,8 +94,13 @@ function validateUpdatePlanRequest(body: UpdatePlanRequest | null):
 
   const name = typeof body.name === "string" ? body.name.trim() : "";
   const yearMonth = typeof body.yearMonth === "string" ? body.yearMonth.trim() : "";
-  const password = typeof body.password === "string" ? body.password : "";
-  const clearPassword = body.clearPassword === true;
+  const accessCode =
+    typeof body.accessCode === "string"
+      ? body.accessCode.trim()
+      : typeof body.password === "string"
+        ? body.password.trim()
+        : "";
+  const clearAccessCode = body.clearAccessCode === true || body.clearPassword === true;
 
   if (!name) {
     return { ok: false, message: "プラン名を入力してください。" };
@@ -107,22 +114,22 @@ function validateUpdatePlanRequest(body: UpdatePlanRequest | null):
     return { ok: false, message: "年月を選択してください。" };
   }
 
-  if (password.length > 100) {
-    return { ok: false, message: "プランパスワードは100文字以内で入力してください。" };
-  }
-
-  if (clearPassword && password.length > 0) {
+  if (clearAccessCode && accessCode.length > 0) {
     return {
       ok: false,
-      message: "プランパスワードを解除する場合は、新しいパスワードを空にしてください。"
+      message: "アクセスコードを解除する場合は、新しいアクセスコードを空にしてください。"
     };
+  }
+
+  if (accessCode && !/^\d{6,12}$/.test(accessCode)) {
+    return { ok: false, message: "アクセスコードは6〜12桁の数字で入力してください。" };
   }
 
   return {
     ok: true,
     name,
     yearMonth,
-    password: password.length > 0 ? password : null,
-    clearPassword
+    accessCode: accessCode.length > 0 ? accessCode : null,
+    clearAccessCode
   };
 }

@@ -6,6 +6,8 @@ import { FormEvent, useState } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
 
+type AccessCodeMode = "none" | "set";
+
 export function NewPlanScreen() {
   return (
     <ProtectedRoute>
@@ -17,6 +19,8 @@ export function NewPlanScreen() {
 function NewPlanForm() {
   const router = useRouter();
   const { user } = useAuth();
+  const [accessCodeMode, setAccessCodeMode] = useState<AccessCodeMode>("none");
+  const [accessCode, setAccessCode] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -27,7 +31,15 @@ function NewPlanForm() {
     const formData = new FormData(event.currentTarget);
     const name = String(formData.get("name") ?? "");
     const yearMonth = String(formData.get("yearMonth") ?? "");
-    const password = String(formData.get("password") ?? "");
+    const validation = validateAccessCodeInput({
+      accessCode,
+      accessCodeMode
+    });
+
+    if (!validation.ok) {
+      setError(validation.message);
+      return;
+    }
 
     if (!user) {
       setError("ログイン状態を確認できません。再度ログインしてください。");
@@ -47,7 +59,7 @@ function NewPlanForm() {
         body: JSON.stringify({
           name,
           yearMonth,
-          password
+          accessCode: validation.accessCode
         })
       });
       const result = (await response.json().catch(() => null)) as {
@@ -110,19 +122,51 @@ function NewPlanForm() {
             />
           </label>
 
-          <label className="field">
-            <span>プランパスワード（任意）</span>
-            <input
-              autoComplete="new-password"
-              disabled={isSubmitting}
-              maxLength={100}
-              name="password"
-              type="password"
-            />
-            <span className="field-hint">
-              設定した場合、招待者は配信用URLアクセス時に入力が必要です。
-            </span>
-          </label>
+          <fieldset className="option-fieldset">
+            <legend>アクセスコード</legend>
+            <p className="field-hint">
+              設定した場合、招待者は共有URLアクセス時に入力が必要です。6〜12桁の数字で入力してください。
+            </p>
+            <div className="radio-group">
+              <label className="radio-field">
+                <input
+                  checked={accessCodeMode === "none"}
+                  disabled={isSubmitting}
+                  onChange={() => {
+                    setAccessCodeMode("none");
+                    setAccessCode("");
+                  }}
+                  type="radio"
+                />
+                <span>アクセスコードを設定しない</span>
+              </label>
+              <label className="radio-field">
+                <input
+                  checked={accessCodeMode === "set"}
+                  disabled={isSubmitting}
+                  onChange={() => setAccessCodeMode("set")}
+                  type="radio"
+                />
+                <span>アクセスコードを設定する</span>
+              </label>
+            </div>
+            {accessCodeMode === "set" ? (
+              <label className="field nested-field">
+                <span>アクセスコード</span>
+                <input
+                  autoComplete="new-password"
+                  disabled={isSubmitting}
+                  inputMode="numeric"
+                  maxLength={12}
+                  onChange={(event) => setAccessCode(event.target.value)}
+                  pattern="[0-9]*"
+                  type="text"
+                  value={accessCode}
+                />
+                <span className="field-hint">6〜12桁の数字</span>
+              </label>
+            ) : null}
+          </fieldset>
 
           {error ? <p className="error-message">{error}</p> : null}
 
@@ -146,4 +190,27 @@ function getCurrentYearMonth() {
   const month = String(now.getMonth() + 1).padStart(2, "0");
 
   return `${year}-${month}`;
+}
+
+function validateAccessCodeInput(input: {
+  accessCode: string;
+  accessCodeMode: AccessCodeMode;
+}):
+  | { ok: true; accessCode: string }
+  | { ok: false; message: string } {
+  const accessCode = input.accessCode.trim();
+
+  if (input.accessCodeMode === "none") {
+    return { ok: true, accessCode: "" };
+  }
+
+  if (!accessCode) {
+    return { ok: false, message: "アクセスコードを入力してください。" };
+  }
+
+  if (!/^\d{6,12}$/.test(accessCode)) {
+    return { ok: false, message: "アクセスコードは6〜12桁の数字で入力してください。" };
+  }
+
+  return { ok: true, accessCode };
 }

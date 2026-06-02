@@ -13,6 +13,7 @@ type FirebaseLookupResponse = {
 type CreatePlanRequest = {
   name?: unknown;
   yearMonth?: unknown;
+  accessCode?: unknown;
   password?: unknown;
 };
 
@@ -21,7 +22,7 @@ type FirestoreRunQueryRow = {
 };
 
 const maxActivePlans = 3;
-const passwordHashIterations = 120000;
+const accessCodeHashIterations = 120000;
 
 export async function POST(request: NextRequest) {
   const idToken = getBearerToken(request);
@@ -78,8 +79,8 @@ export async function POST(request: NextRequest) {
   const now = new Date().toISOString();
   const planId = randomUUID();
   const publicToken = randomBytes(24).toString("base64url");
-  const passwordHash = validation.password
-    ? hashPlanPassword(validation.password)
+  const accessCodeHash = validation.accessCode
+    ? hashAccessCode(validation.accessCode)
     : null;
 
   const createResponse = await fetch(
@@ -96,8 +97,8 @@ export async function POST(request: NextRequest) {
           ownerUid: { stringValue: authUser.uid },
           name: { stringValue: validation.name },
           yearMonth: { stringValue: validation.yearMonth },
-          passwordHash: passwordHash
-            ? { stringValue: passwordHash }
+          passwordHash: accessCodeHash
+            ? { stringValue: accessCodeHash }
             : { nullValue: null },
           publicToken: { stringValue: publicToken },
           isActive: { booleanValue: true },
@@ -164,7 +165,7 @@ async function verifyFirebaseIdToken(idToken: string, firebaseApiKey: string) {
 }
 
 function validateCreatePlanRequest(body: CreatePlanRequest | null):
-  | { ok: true; name: string; yearMonth: string; password: string | null }
+  | { ok: true; name: string; yearMonth: string; accessCode: string | null }
   | { ok: false; message: string } {
   if (!body) {
     return { ok: false, message: "入力内容が正しくありません。" };
@@ -173,7 +174,12 @@ function validateCreatePlanRequest(body: CreatePlanRequest | null):
   const name = typeof body.name === "string" ? body.name.trim() : "";
   const yearMonth =
     typeof body.yearMonth === "string" ? body.yearMonth.trim() : "";
-  const password = typeof body.password === "string" ? body.password : "";
+  const accessCode =
+    typeof body.accessCode === "string"
+      ? body.accessCode.trim()
+      : typeof body.password === "string"
+        ? body.password.trim()
+        : "";
 
   if (!name) {
     return { ok: false, message: "プラン名を入力してください。" };
@@ -187,10 +193,10 @@ function validateCreatePlanRequest(body: CreatePlanRequest | null):
     return { ok: false, message: "年月を選択してください。" };
   }
 
-  if (password.length > 100) {
+  if (accessCode && !/^\d{6,12}$/.test(accessCode)) {
     return {
       ok: false,
-      message: "プランパスワードは100文字以内で入力してください。"
+      message: "アクセスコードは6〜12桁の数字で入力してください。"
     };
   }
 
@@ -198,7 +204,7 @@ function validateCreatePlanRequest(body: CreatePlanRequest | null):
     ok: true,
     name,
     yearMonth,
-    password: password.length > 0 ? password : null
+    accessCode: accessCode.length > 0 ? accessCode : null
   };
 }
 
@@ -254,17 +260,17 @@ async function countActivePlans({
   return rows.filter((row) => row.document).length;
 }
 
-function hashPlanPassword(password: string) {
+function hashAccessCode(accessCode: string) {
   const salt = randomBytes(16).toString("base64url");
   const hash = pbkdf2Sync(
-    password,
+    accessCode,
     salt,
-    passwordHashIterations,
+    accessCodeHashIterations,
     32,
     "sha256"
   ).toString("base64url");
 
-  return `pbkdf2_sha256$${passwordHashIterations}$${salt}$${hash}`;
+  return `pbkdf2_sha256$${accessCodeHashIterations}$${salt}$${hash}`;
 }
 
 function getFirestoreDocumentsUrl(projectId: string) {

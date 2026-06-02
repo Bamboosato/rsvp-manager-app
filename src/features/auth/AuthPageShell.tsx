@@ -12,7 +12,7 @@ export function AuthPageShell({
   return (
     <main className="auth-page">
       <section className="auth-panel" aria-labelledby="auth-heading">
-        <p className="eyebrow">RSVP Manager</p>
+        <p className="eyebrow">RSVP Hub</p>
         <h1 id="auth-heading">{title}</h1>
         <p className="auth-description">{description}</p>
         {children}

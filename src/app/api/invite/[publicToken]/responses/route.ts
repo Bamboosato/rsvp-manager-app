@@ -58,13 +58,17 @@ export async function GET(request: NextRequest, context: RouteContext) {
       })
     ]);
     const responseMap = new Map(responses.map((response) => [response.eventId, response]));
+    const visibleEvents = events.filter((event) => {
+      const hasResponse = responseMap.has(event.id);
+      return event.status === "accepting" || hasResponse;
+    });
 
     return NextResponse.json({
       plan: toPublicPlan(plan),
       guest: {
         nickname: session.nickname
       },
-      events: events.map((event) => {
+      events: visibleEvents.map((event) => {
         const response = responseMap.get(event.id);
 
         return {

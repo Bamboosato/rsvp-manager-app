@@ -72,6 +72,7 @@ function EventDetail({ eventId }: { eventId: string }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [isAddResponseOpen, setIsAddResponseOpen] = useState(false);
   const [editing, setEditing] = useState<EditingState>(null);
   const [pinReset, setPinReset] = useState<PinResetState>(null);
   const isAddResponseSubmittingRef = useRef(false);
@@ -167,6 +168,7 @@ function EventDetail({ eventId }: { eventId: string }) {
       }
 
       form.reset();
+      setIsAddResponseOpen(false);
       setNotice("回答を代理追加しました。");
       await loadDetail();
     } catch {
@@ -325,8 +327,8 @@ function EventDetail({ eventId }: { eventId: string }) {
         <SummaryCard label="不参加" value={String(detail.summary.no)} />
       </section>
 
-      <section className="panel info-panel" aria-label="イベント情報">
-        <dl className="definition-grid">
+      <section className="panel info-panel event-info-panel" aria-label="イベント情報">
+        <dl className="definition-grid event-definition-grid">
           <div>
             <dt>プラン</dt>
             <dd>
@@ -343,6 +345,10 @@ function EventDetail({ eventId }: { eventId: string }) {
             <dd>{detail.event.timeSlot}</dd>
           </div>
           <div>
+            <dt>場所</dt>
+            <dd>{detail.event.place}</dd>
+          </div>
+          <div>
             <dt>状態</dt>
             <dd>
               <span
@@ -356,19 +362,7 @@ function EventDetail({ eventId }: { eventId: string }) {
               </span>
             </dd>
           </div>
-          <div>
-            <dt>場所</dt>
-            <dd>{detail.event.place}</dd>
-          </div>
         </dl>
-        <div className="row-actions">
-          <Link
-            className="secondary-button button-link"
-            href={`/admin/plans/${detail.event.planId}/events/${detail.event.id}/edit`}
-          >
-            イベント編集
-          </Link>
-        </div>
       </section>
 
       {notice ? <p className="success-message top-message">{notice}</p> : null}
@@ -380,6 +374,18 @@ function EventDetail({ eventId }: { eventId: string }) {
             <p className="eyebrow">Responses</p>
             <h2 id="responses-heading">出欠内訳</h2>
           </div>
+          <button
+            className="primary-button"
+            disabled={isSubmitting}
+            onClick={() => {
+              setError("");
+              setNotice("");
+              setIsAddResponseOpen(true);
+            }}
+            type="button"
+          >
+            代理回答
+          </button>
         </div>
 
         {detail.responses.length === 0 ? (
@@ -409,26 +415,30 @@ function EventDetail({ eventId }: { eventId: string }) {
                       <div className="row-actions">
                         <button
                           className="secondary-button compact-button"
-                          onClick={() =>
+                          onClick={() => {
+                            setError("");
+                            setNotice("");
                             setEditing({
                               response,
                               attendanceStatus: response.attendanceStatus,
                               comment: response.comment
-                            })
-                          }
+                            });
+                          }}
                           type="button"
                         >
                           修正
                         </button>
                         <button
                           className="secondary-button compact-button"
-                          onClick={() =>
+                          onClick={() => {
+                            setError("");
+                            setNotice("");
                             setPinReset({
                               response,
                               newPin: "",
                               confirmPin: ""
-                            })
-                          }
+                            });
+                          }}
                           type="button"
                         >
                           PINリセット
@@ -443,178 +453,221 @@ function EventDetail({ eventId }: { eventId: string }) {
         )}
       </section>
 
-      <section className="panel" aria-labelledby="add-response-heading">
-        <div className="section-heading stacked-heading">
-          <div>
-            <p className="eyebrow">Admin Entry</p>
-            <h2 id="add-response-heading">回答代理追加</h2>
-          </div>
+      {isAddResponseOpen ? (
+        <div className="modal-backdrop">
+          <section
+            aria-labelledby="add-response-heading"
+            aria-modal="true"
+            className="modal-panel"
+            role="dialog"
+          >
+            <div className="section-heading stacked-heading">
+              <div>
+                <p className="eyebrow">Admin Entry</p>
+                <h2 id="add-response-heading">代理回答</h2>
+              </div>
+            </div>
+            <form className="form-stack" onSubmit={handleAddResponse}>
+              <div className="inline-form-grid">
+                <label className="field">
+                  <span>ニックネーム</span>
+                  <input disabled={isSubmitting} maxLength={40} name="nickname" required type="text" />
+                </label>
+                <label className="field">
+                  <span>PIN</span>
+                  <input
+                    disabled={isSubmitting}
+                    inputMode="numeric"
+                    maxLength={4}
+                    name="pin"
+                    pattern="\d{4}"
+                    required
+                    type="text"
+                  />
+                </label>
+                <label className="field">
+                  <span>出欠</span>
+                  <select defaultValue="yes" disabled={isSubmitting} name="attendanceStatus" required>
+                    <option value="yes">○ 参加</option>
+                    <option value="maybe">△ 未定</option>
+                    <option value="no">× 不参加</option>
+                  </select>
+                </label>
+              </div>
+              <label className="field">
+                <span>コメント</span>
+                <textarea disabled={isSubmitting} maxLength={500} name="comment" rows={3} />
+              </label>
+              {error ? <p className="error-message">{error}</p> : null}
+              <div className="form-actions">
+                <button className="primary-button" disabled={isSubmitting} type="submit">
+                  {isSubmitting ? "保存中" : "追加"}
+                </button>
+                <button
+                  className="secondary-button"
+                  disabled={isSubmitting}
+                  onClick={() => {
+                    setError("");
+                    setIsAddResponseOpen(false);
+                  }}
+                  type="button"
+                >
+                  キャンセル
+                </button>
+              </div>
+            </form>
+          </section>
         </div>
-        <form className="form-stack" onSubmit={handleAddResponse}>
-          <div className="inline-form-grid">
-            <label className="field">
-              <span>ニックネーム</span>
-              <input disabled={isSubmitting} maxLength={40} name="nickname" required type="text" />
-            </label>
-            <label className="field">
-              <span>PIN</span>
-              <input
-                disabled={isSubmitting}
-                inputMode="numeric"
-                maxLength={4}
-                name="pin"
-                pattern="\d{4}"
-                required
-                type="text"
-              />
-            </label>
-            <label className="field">
-              <span>出欠</span>
-              <select defaultValue="yes" disabled={isSubmitting} name="attendanceStatus" required>
-                <option value="yes">○ 参加</option>
-                <option value="maybe">△ 未定</option>
-                <option value="no">× 不参加</option>
-              </select>
-            </label>
-          </div>
-          <label className="field">
-            <span>コメント</span>
-            <textarea disabled={isSubmitting} maxLength={500} name="comment" rows={3} />
-          </label>
-          <div className="form-actions">
-            <button className="primary-button" disabled={isSubmitting} type="submit">
-              {isSubmitting ? "保存中" : "追加"}
-            </button>
-          </div>
-        </form>
-      </section>
+      ) : null}
 
       {editing ? (
-        <section className="panel action-panel" aria-labelledby="edit-response-heading">
-          <div className="section-heading stacked-heading">
-            <div>
-              <p className="eyebrow">Edit</p>
-              <h2 id="edit-response-heading">回答修正: {editing.response.nickname}</h2>
+        <div className="modal-backdrop">
+          <section
+            aria-labelledby="edit-response-heading"
+            aria-modal="true"
+            className="modal-panel"
+            role="dialog"
+          >
+            <div className="section-heading stacked-heading">
+              <div>
+                <p className="eyebrow">Edit</p>
+                <h2 id="edit-response-heading">回答修正: {editing.response.nickname}</h2>
+              </div>
             </div>
-          </div>
-          <form className="form-stack" onSubmit={handleEditResponse}>
-            <p className="notice-message">
-              この回答を管理者として修正します。回答日時も更新されます。
-            </p>
-            <label className="field">
-              <span>出欠</span>
-              <select
-                disabled={isSubmitting}
-                onChange={(event) =>
-                  setEditing({
-                    ...editing,
-                    attendanceStatus: event.target.value as AttendanceStatus
-                  })
-                }
-                value={editing.attendanceStatus}
-              >
-                <option value="yes">○ 参加</option>
-                <option value="maybe">△ 未定</option>
-                <option value="no">× 不参加</option>
-              </select>
-            </label>
-            <label className="field">
-              <span>コメント</span>
-              <textarea
-                disabled={isSubmitting}
-                maxLength={500}
-                onChange={(event) =>
-                  setEditing({
-                    ...editing,
-                    comment: event.target.value
-                  })
-                }
-                rows={3}
-                value={editing.comment}
-              />
-            </label>
-            <div className="form-actions">
-              <button className="primary-button" disabled={isSubmitting} type="submit">
-                保存
-              </button>
-              <button
-                className="secondary-button"
-                disabled={isSubmitting}
-                onClick={() => setEditing(null)}
-                type="button"
-              >
-                キャンセル
-              </button>
-            </div>
-          </form>
-        </section>
+            <form className="form-stack" onSubmit={handleEditResponse}>
+              <p className="notice-message">
+                この回答を管理者として修正します。回答日時も更新されます。
+              </p>
+              <label className="field">
+                <span>出欠</span>
+                <select
+                  disabled={isSubmitting}
+                  onChange={(event) =>
+                    setEditing({
+                      ...editing,
+                      attendanceStatus: event.target.value as AttendanceStatus
+                    })
+                  }
+                  value={editing.attendanceStatus}
+                >
+                  <option value="yes">○ 参加</option>
+                  <option value="maybe">△ 未定</option>
+                  <option value="no">× 不参加</option>
+                </select>
+              </label>
+              <label className="field">
+                <span>コメント</span>
+                <textarea
+                  disabled={isSubmitting}
+                  maxLength={500}
+                  onChange={(event) =>
+                    setEditing({
+                      ...editing,
+                      comment: event.target.value
+                    })
+                  }
+                  rows={3}
+                  value={editing.comment}
+                />
+              </label>
+              {error ? <p className="error-message">{error}</p> : null}
+              <div className="form-actions">
+                <button className="primary-button" disabled={isSubmitting} type="submit">
+                  保存
+                </button>
+                <button
+                  className="secondary-button"
+                  disabled={isSubmitting}
+                  onClick={() => {
+                    setError("");
+                    setEditing(null);
+                  }}
+                  type="button"
+                >
+                  キャンセル
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
       ) : null}
 
       {pinReset ? (
-        <section className="panel action-panel" aria-labelledby="pin-reset-heading">
-          <div className="section-heading stacked-heading">
-            <div>
-              <p className="eyebrow">PIN Reset</p>
-              <h2 id="pin-reset-heading">PINリセット: {pinReset.response.nickname}</h2>
+        <div className="modal-backdrop">
+          <section
+            aria-labelledby="pin-reset-heading"
+            aria-modal="true"
+            className="modal-panel"
+            role="dialog"
+          >
+            <div className="section-heading stacked-heading">
+              <div>
+                <p className="eyebrow">PIN Reset</p>
+                <h2 id="pin-reset-heading">PINリセット: {pinReset.response.nickname}</h2>
+              </div>
             </div>
-          </div>
-          <form className="form-stack" onSubmit={handlePinReset}>
-            <p className="notice-message">
-              PINリセットでは既存の出欠回答は変更されません。新しいPINはLINE等で招待者へ連絡してください。
-            </p>
-            <div className="inline-form-grid two-columns">
-              <label className="field">
-                <span>新PIN</span>
-                <input
+            <form className="form-stack" onSubmit={handlePinReset}>
+              <p className="notice-message">
+                PINリセットでは既存の出欠回答は変更されません。新しいPINはLINE等で招待者へ連絡してください。
+              </p>
+              <div className="inline-form-grid two-columns">
+                <label className="field">
+                  <span>新PIN</span>
+                  <input
+                    disabled={isSubmitting}
+                    inputMode="numeric"
+                    maxLength={4}
+                    onChange={(event) =>
+                      setPinReset({
+                        ...pinReset,
+                        newPin: event.target.value
+                      })
+                    }
+                    pattern="\d{4}"
+                    required
+                    type="text"
+                    value={pinReset.newPin}
+                  />
+                </label>
+                <label className="field">
+                  <span>新PIN確認</span>
+                  <input
+                    disabled={isSubmitting}
+                    inputMode="numeric"
+                    maxLength={4}
+                    onChange={(event) =>
+                      setPinReset({
+                        ...pinReset,
+                        confirmPin: event.target.value
+                      })
+                    }
+                    pattern="\d{4}"
+                    required
+                    type="text"
+                    value={pinReset.confirmPin}
+                  />
+                </label>
+              </div>
+              {error ? <p className="error-message">{error}</p> : null}
+              <div className="form-actions">
+                <button className="primary-button" disabled={isSubmitting} type="submit">
+                  リセット
+                </button>
+                <button
+                  className="secondary-button"
                   disabled={isSubmitting}
-                  inputMode="numeric"
-                  maxLength={4}
-                  onChange={(event) =>
-                    setPinReset({
-                      ...pinReset,
-                      newPin: event.target.value
-                    })
-                  }
-                  pattern="\d{4}"
-                  required
-                  type="text"
-                  value={pinReset.newPin}
-                />
-              </label>
-              <label className="field">
-                <span>新PIN確認</span>
-                <input
-                  disabled={isSubmitting}
-                  inputMode="numeric"
-                  maxLength={4}
-                  onChange={(event) =>
-                    setPinReset({
-                      ...pinReset,
-                      confirmPin: event.target.value
-                    })
-                  }
-                  pattern="\d{4}"
-                  required
-                  type="text"
-                  value={pinReset.confirmPin}
-                />
-              </label>
-            </div>
-            <div className="form-actions">
-              <button className="primary-button" disabled={isSubmitting} type="submit">
-                リセット
-              </button>
-              <button
-                className="secondary-button"
-                disabled={isSubmitting}
-                onClick={() => setPinReset(null)}
-                type="button"
-              >
-                キャンセル
-              </button>
-            </div>
-          </form>
-        </section>
+                  onClick={() => {
+                    setError("");
+                    setPinReset(null);
+                  }}
+                  type="button"
+                >
+                  キャンセル
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
       ) : null}
     </main>
   );

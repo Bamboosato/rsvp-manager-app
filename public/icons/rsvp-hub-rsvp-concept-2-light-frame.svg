@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">RSVP Hub icon with RSVP text concept 2 light frame</title>
+  <desc id="desc">A lighter dark-framed RSVP dashboard icon with wider white panel and response tiles.</desc>
+  <rect width="512" height="512" rx="112" fill="#17202a" />
+  <rect x="58" y="68" width="396" height="376" rx="72" fill="#ffffff" />
+  <rect x="96" y="116" width="320" height="92" rx="30" fill="#2563eb" />
+  <text x="256" y="181" fill="#ffffff" font-family="Arial, sans-serif" font-size="60" font-weight="800" letter-spacing="0" text-anchor="middle">RSVP</text>
+  <rect x="116" y="262" width="98" height="98" rx="24" fill="#dbeafe" />
+  <rect x="298" y="262" width="98" height="98" rx="24" fill="#f1f3f5" />
+  <circle cx="165" cy="311" r="25" fill="none" stroke="#2563eb" stroke-width="14" />
+  <path d="M331 325 361 295M361 325 331 295" stroke="#17202a" stroke-width="14" stroke-linecap="round" />
+  <path d="M232 311H280" stroke="#94a3b8" stroke-width="18" stroke-linecap="round" />
+  <circle cx="256" cy="311" r="16" fill="#2563eb" />
+</svg>

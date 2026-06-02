@@ -11,7 +11,7 @@ MVPでは、以下を最優先で守る。
 - イベント管理者ごとのデータ分離
 - 招待者に他招待者の回答やPIN関連情報を見せない
 - 無効化済みプラン、無効化済みイベント、締切済イベントへの不正更新を防ぐ
-- 4桁PINとプランパスワードを平文保存しない
+- 4桁PINとアクセスコードを平文保存しない
 - スマホ招待者UIとPC管理画面の両立
 - 業務アプリ寄りの落ち着いたUIで、出欠状況を効率よく確認、集計できること
 
@@ -47,7 +47,7 @@ flowchart LR
 | --- | --- |
 | Web UI | 管理画面、招待者画面、入力状態管理、表示制御 |
 | Firebase Auth | イベント管理者のログイン、ログアウト、パスワードリセット |
-| Vercel API層 | PIN照合、プランパスワード照合、招待者回答保存、通知送信、監査ログ記録 |
+| Vercel API層 | PIN照合、アクセスコード照合、招待者回答保存、通知送信、監査ログ記録 |
 | Firestore | プラン、イベント、招待者、回答、通知token、監査ログの永続化 |
 | FCM | イベント管理者への回答更新通知 |
 
@@ -63,19 +63,19 @@ flowchart LR
 
 ### 4.2 API層を必ず経由する処理
 
-- プランパスワード照合
+- アクセスコード照合
 - 招待者のニックネーム+PIN照合
 - 招待者の初回登録
 - 招待者回答の保存
 - PINリセット
-- プランパスワードのハッシュ化保存
+- アクセスコードのハッシュ化保存
 - 通知送信
 - 監査ログ記録
 
 理由:
 
 - PINは4桁で総当たりされやすいため、`pinHash` を招待者クライアントへ返さない。
-- プランパスワードも招待者クライアントへ返さない。
+- アクセスコードも招待者クライアントへ返さない。
 - 招待者保存時は、プラン有効状態、イベント有効状態、締切状態をサーバー側で再検証する。
 - 通知送信はサーバー側の認証情報を必要とする。
 
@@ -103,7 +103,7 @@ flowchart LR
 | API | Method | 認証 | 内容 |
 | --- | --- | --- | --- |
 | `/api/admin/plans` | POST | Firebase ID token | プラン作成 |
-| `/api/admin/plans/{planId}` | PATCH | Firebase ID token | プラン更新、プランパスワード変更、解除 |
+| `/api/admin/plans/{planId}` | PATCH | Firebase ID token | プラン更新、アクセスコード変更、解除 |
 | `/api/admin/plans/{planId}/disable` | POST | Firebase ID token | プラン無効化 |
 | `/api/admin/plans/{planId}/events` | POST | Firebase ID token | イベント作成 |
 | `/api/admin/events/{eventId}` | PATCH | Firebase ID token | イベント更新、ステータス変更 |
@@ -118,10 +118,12 @@ flowchart LR
 | API | Method | 認証 | 内容 |
 | --- | --- | --- | --- |
 | `/api/invite/{publicToken}` | GET | 不要 | プラン公開情報取得 |
-| `/api/invite/{publicToken}/password` | POST | 不要 | プランパスワード照合 |
+| `/api/invite/{publicToken}/password` | POST | 不要 | アクセスコード照合 |
 | `/api/invite/{publicToken}/entry` | POST | 不要 | ニックネーム+PIN照合、招待者セッション発行 |
 | `/api/invite/{publicToken}/responses` | GET | 招待者セッション | 自分の回答取得 |
 | `/api/invite/{publicToken}/responses` | POST | 招待者セッション | 自分の回答保存 |
+
+`GET /api/invite/{publicToken}/responses` は、受付中イベントと、招待者本人の回答が存在する締切済イベントのみを返す。締切済かつ本人回答が存在しないイベントは返さない。
 
 ### 6.3 招待者セッション
 
@@ -167,7 +169,7 @@ MVPでは、アプリ管理者がFirebase ConsoleでAuthユーザーを作成す
 | ownerUid | string | yes | 作成したイベント管理者UID |
 | name | string | yes | プラン名 |
 | yearMonth | string | yes | `YYYY-MM` |
-| passwordHash | string/null | no | プランパスワードのハッシュ |
+| passwordHash | string/null | no | アクセスコードのハッシュ |
 | publicToken | string | yes | 配信用URL用の推測困難なtoken |
 | isActive | boolean | yes | 有効状態 |
 | createdAt | timestamp | yes | 作成日時 |
@@ -303,9 +305,9 @@ Firestoreで必要になる主な検索条件:
 - 招待者は自分の `guestId` に紐づく回答だけ取得できる。
 - 招待者セッションの `planId`、`guestId`、`ownerUid` とリクエスト対象を照合する。
 
-### 9.3 PINとパスワード
+### 9.3 PINとアクセスコード
 
-- PIN、プランパスワードは平文保存しない。
+- PIN、アクセスコードは平文保存しない。
 - ハッシュ化はAPI層で行う。
 - 4桁PINは低エントロピーのため、`pinHash` をクライアントに返さない。
 - PIN照合失敗回数が短時間で多い場合は、レート制限を検討する。
@@ -316,7 +318,7 @@ Firestoreで必要になる主な検索条件:
 - 管理画面で配信用URLを表示、コピーするため、MVPでは `plans.publicToken` として保持する。
 - `publicToken` は `ownerUid` によるアクセス制御でイベント管理者本人だけが閲覧できるようにする。
 - 招待者向けAPIは `publicToken` から対象プランを特定する。
-- `publicToken` だけで回答編集を許可せず、プランパスワード、ニックネーム、PIN、招待者セッションで追加確認する。
+- `publicToken` だけで回答編集を許可せず、アクセスコード、ニックネーム、PIN、招待者セッションで追加確認する。
 
 ## 10. 主要処理フロー
 
@@ -343,10 +345,10 @@ sequenceDiagram
   participant UI as Web UI
   participant API as Vercel API
   participant DB as Firestore
-  A->>UI: プラン名/年月/任意パスワード入力
+  A->>UI: プラン名/年月/任意アクセスコード入力
   UI->>API: プラン作成
   API->>API: 有効プラン数を検証
-  API->>API: publicToken生成/パスワードハッシュ化
+  API->>API: publicToken生成/アクセスコードハッシュ化
   API->>DB: plans作成
   API-->>UI: 配信用URL返却
   UI-->>A: URL表示/コピー可能
@@ -424,7 +426,7 @@ MVPでは再有効化は必須ではない。
 | --- | --- | --- |
 | publicToken不正 | 「URLが正しくないか、利用できません。」 | warn |
 | プラン無効 | 「このプランは現在利用できません。」 | info |
-| プランパスワード不一致 | 入力欄近くにエラー表示 | warn |
+| アクセスコード不一致 | 入力欄近くにエラー表示 | warn |
 | 同一ニックネーム別PIN | 「同じニックネームは既に使用されています。」 | warn |
 | 締切済イベント更新 | 対象イベントの保存不可を表示 | info |
 | ネットワークエラー | 再試行案内 | error |

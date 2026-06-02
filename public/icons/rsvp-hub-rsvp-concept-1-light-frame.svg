@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">RSVP Hub icon with RSVP text concept 1 light frame</title>
+  <desc id="desc">A lighter blue-framed RSVP Hub icon with wider white panel and connected response nodes.</desc>
+  <rect width="512" height="512" rx="112" fill="#2563eb" />
+  <rect x="58" y="62" width="396" height="388" rx="72" fill="#ffffff" />
+  <text x="256" y="178" fill="#17202a" font-family="Arial, sans-serif" font-size="74" font-weight="800" letter-spacing="0" text-anchor="middle">RSVP</text>
+  <path d="M132 226H380" stroke="#d9dee5" stroke-width="18" stroke-linecap="round" />
+  <circle cx="170" cy="326" r="36" fill="#2563eb" />
+  <circle cx="256" cy="288" r="36" fill="#17202a" />
+  <circle cx="342" cy="326" r="36" fill="#687385" />
+  <path d="M202 310 223 301" stroke="#94a3b8" stroke-width="16" stroke-linecap="round" />
+  <path d="M289 301 310 310" stroke="#94a3b8" stroke-width="16" stroke-linecap="round" />
+  <circle cx="170" cy="326" r="14" fill="#ffffff" />
+  <path d="M239 288h34M256 271v34" stroke="#ffffff" stroke-width="12" stroke-linecap="round" />
+  <path d="M324 326h36" stroke="#ffffff" stroke-width="12" stroke-linecap="round" />
+</svg>

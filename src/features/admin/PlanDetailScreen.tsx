@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
 import { getFirebaseClientFirestore } from "@/lib/firebase/client";
@@ -9,10 +9,10 @@ import {
   disableEvent,
   formatEventDate,
   getEventStatusLabel,
-  getNextEventStatus,
   subscribePlanEvents,
   updateEventStatus,
-  type AdminEvent
+  type AdminEvent,
+  type EventStatus
 } from "./events/data";
 import {
   formatDateTime,
@@ -44,7 +44,11 @@ function PlanDetail({ planId }: { planId: string }) {
   const [isEventsLoading, setIsEventsLoading] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [isInviteUrlCopied, setIsInviteUrlCopied] = useState(false);
+  const [statusFeedbackEventId, setStatusFeedbackEventId] = useState<string | null>(null);
   const [updatingEventId, setUpdatingEventId] = useState<string | null>(null);
+  const copyFeedbackTimerRef = useRef<number | null>(null);
+  const statusFeedbackTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!db || !user) {
@@ -87,6 +91,17 @@ function PlanDetail({ planId }: { planId: string }) {
   }, [db, plan, user]);
 
   useEffect(() => {
+    return () => {
+      if (copyFeedbackTimerRef.current) {
+        window.clearTimeout(copyFeedbackTimerRef.current);
+      }
+      if (statusFeedbackTimerRef.current) {
+        window.clearTimeout(statusFeedbackTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     if (!db || !user || !plan) {
       return undefined;
     }
@@ -120,14 +135,42 @@ function PlanDetail({ planId }: { planId: string }) {
 
     try {
       await navigator.clipboard.writeText(`${window.location.origin}/invite/${plan.publicToken}`);
-      setNotice("配信用URLをコピーしました。");
+      showCopyFeedback();
     } catch {
       setError("URLコピーに失敗しました。ブラウザの設定を確認してください。");
     }
   }
 
-  async function handleToggleEventStatus(event: AdminEvent) {
+  function showCopyFeedback() {
+    setIsInviteUrlCopied(true);
+
+    if (copyFeedbackTimerRef.current) {
+      window.clearTimeout(copyFeedbackTimerRef.current);
+    }
+
+    copyFeedbackTimerRef.current = window.setTimeout(() => {
+      setIsInviteUrlCopied(false);
+      copyFeedbackTimerRef.current = null;
+    }, 3000);
+  }
+
+  async function handleChangeEventStatus(event: AdminEvent, nextStatus: EventStatus) {
     if (!db) {
+      return;
+    }
+
+    if (event.status === nextStatus) {
+      return;
+    }
+
+    const label = getEventTitle(event);
+    const confirmed = window.confirm(
+      nextStatus === "closed"
+        ? `イベント「${label}」を締切済にします。招待者はこのイベントの出欠を変更できなくなります。よろしいですか？`
+        : `イベント「${label}」を受付中に戻します。招待者がこのイベントの出欠を変更できるようになります。よろしいですか？`
+    );
+
+    if (!confirmed) {
       return;
     }
 
@@ -136,13 +179,12 @@ function PlanDetail({ planId }: { planId: string }) {
     setUpdatingEventId(event.id);
 
     try {
-      const nextStatus = getNextEventStatus(event.status);
       await updateEventStatus({
         db,
         eventId: event.id,
         status: nextStatus
       });
-      setNotice(`イベントを${getEventStatusLabel(nextStatus)}に変更しました。`);
+      showStatusFeedback(event.id);
     } catch {
       setError("イベントステータスの変更に失敗しました。");
     } finally {
@@ -150,14 +192,27 @@ function PlanDetail({ planId }: { planId: string }) {
     }
   }
 
-  async function handleDisableEvent(event: AdminEvent) {
+  function showStatusFeedback(eventId: string) {
+    setStatusFeedbackEventId(eventId);
+
+    if (statusFeedbackTimerRef.current) {
+      window.clearTimeout(statusFeedbackTimerRef.current);
+    }
+
+    statusFeedbackTimerRef.current = window.setTimeout(() => {
+      setStatusFeedbackEventId(null);
+      statusFeedbackTimerRef.current = null;
+    }, 3000);
+  }
+
+  async function handleDeleteEvent(event: AdminEvent) {
     if (!db) {
       return;
     }
 
     const label = getEventTitle(event);
     const confirmed = window.confirm(
-      `「${label}」を無効化します。招待者画面には表示されなくなります。`
+      `イベント「${label}」を削除します。招待者画面には表示されなくなります。よろしいですか？`
     );
 
     if (!confirmed) {
@@ -170,9 +225,9 @@ function PlanDetail({ planId }: { planId: string }) {
 
     try {
       await disableEvent(db, event.id);
-      setNotice("イベントを無効化しました。");
+      setNotice("イベントを削除しました。");
     } catch {
-      setError("イベントの無効化に失敗しました。");
+      setError("イベントの削除に失敗しました。");
     } finally {
       setUpdatingEventId(null);
     }
@@ -249,7 +304,7 @@ function PlanDetail({ planId }: { planId: string }) {
             </dd>
           </div>
           <div>
-            <dt>プランパスワード</dt>
+            <dt>アクセスコード</dt>
             <dd>{plan.hasPassword ? "設定済み" : "未設定"}</dd>
           </div>
           <div>
@@ -258,20 +313,21 @@ function PlanDetail({ planId }: { planId: string }) {
           </div>
         </dl>
         <div className="row-actions">
-          <Link
-            className="secondary-button button-link"
-            href={`/admin/plans/${plan.id}/edit`}
-          >
-            プラン編集
-          </Link>
-          <button
-            className="secondary-button"
-            disabled={!plan.isActive}
-            onClick={handleCopyInviteUrl}
-            type="button"
-          >
-            配信用URLコピー
-          </button>
+          <div className="copy-feedback-wrap">
+            <button
+              className="secondary-button"
+              disabled={!plan.isActive}
+              onClick={handleCopyInviteUrl}
+              type="button"
+            >
+              配信用URLコピー
+            </button>
+            {isInviteUrlCopied ? (
+              <span className="copy-feedback" role="status">
+                コピーしました
+              </span>
+            ) : null}
+          </div>
         </div>
       </section>
 
@@ -322,9 +378,9 @@ function PlanDetail({ planId }: { planId: string }) {
             <table>
               <thead>
                 <tr>
+                  <th>イベント</th>
                   <th>日程</th>
                   <th>時間帯</th>
-                  <th>イベント</th>
                   <th>場所</th>
                   <th>状態</th>
                   <th>出欠</th>
@@ -334,20 +390,49 @@ function PlanDetail({ planId }: { planId: string }) {
               <tbody>
                 {events.map((event) => (
                   <tr key={event.id}>
+                    <td className="strong-cell">{getEventTitle(event)}</td>
                     <td>{formatEventDate(event.eventDate)}</td>
                     <td>{event.timeSlot}</td>
-                    <td className="strong-cell">{getEventTitle(event)}</td>
                     <td>{event.place}</td>
                     <td>
-                      <span
-                        className={
-                          event.status === "accepting"
-                            ? "status-badge"
-                            : "status-badge muted"
-                        }
-                      >
-                        {getEventStatusLabel(event.status)}
-                      </span>
+                      <div className="status-feedback-wrap">
+                        <div
+                          className="status-segment"
+                          aria-label={`イベント状態: ${getEventStatusLabel(event.status)}`}
+                        >
+                          <button
+                            aria-pressed={event.status === "accepting"}
+                            className={
+                              event.status === "accepting"
+                                ? "status-segment-button active"
+                                : "status-segment-button"
+                            }
+                            disabled={updatingEventId === event.id}
+                            onClick={() => handleChangeEventStatus(event, "accepting")}
+                            type="button"
+                          >
+                            受付中
+                          </button>
+                          <button
+                            aria-pressed={event.status === "closed"}
+                            className={
+                              event.status === "closed"
+                                ? "status-segment-button active muted"
+                                : "status-segment-button"
+                            }
+                            disabled={updatingEventId === event.id}
+                            onClick={() => handleChangeEventStatus(event, "closed")}
+                            type="button"
+                          >
+                            締切済
+                          </button>
+                        </div>
+                        {statusFeedbackEventId === event.id ? (
+                          <span className="copy-feedback" role="status">
+                            変更しました
+                          </span>
+                        ) : null}
+                      </div>
                     </td>
                     <td>
                       <AttendanceBadges
@@ -362,7 +447,7 @@ function PlanDetail({ planId }: { planId: string }) {
                           className="secondary-button compact-button button-link"
                           href={`/admin/plans/${plan.id}/events/${event.id}`}
                         >
-                          詳細
+                          出欠内訳
                         </Link>
                         <Link
                           className="secondary-button compact-button button-link"
@@ -371,20 +456,12 @@ function PlanDetail({ planId }: { planId: string }) {
                           編集
                         </Link>
                         <button
-                          className="secondary-button compact-button"
-                          disabled={updatingEventId === event.id}
-                          onClick={() => handleToggleEventStatus(event)}
-                          type="button"
-                        >
-                          {event.status === "accepting" ? "締切済にする" : "受付中にする"}
-                        </button>
-                        <button
                           className="danger-button compact-button"
                           disabled={updatingEventId === event.id}
-                          onClick={() => handleDisableEvent(event)}
+                          onClick={() => handleDeleteEvent(event)}
                           type="button"
                         >
-                          無効化
+                          削除
                         </button>
                       </div>
                     </td>

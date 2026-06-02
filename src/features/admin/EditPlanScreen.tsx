@@ -12,6 +12,8 @@ type UpdatePlanResponse = {
   message?: string;
 };
 
+type AccessCodeAction = "keep" | "clear" | "change" | "none" | "set";
+
 export function EditPlanScreen({ planId }: { planId: string }) {
   return (
     <ProtectedRoute>
@@ -27,8 +29,8 @@ function EditPlanForm({ planId }: { planId: string }) {
   const [plan, setPlan] = useState<AdminPlan | null>(null);
   const [name, setName] = useState("");
   const [yearMonth, setYearMonth] = useState("");
-  const [password, setPassword] = useState("");
-  const [clearPassword, setClearPassword] = useState(false);
+  const [accessCode, setAccessCode] = useState("");
+  const [accessCodeAction, setAccessCodeAction] = useState<AccessCodeAction>("none");
   const [isPlanLoading, setIsPlanLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -46,6 +48,8 @@ function EditPlanForm({ planId }: { planId: string }) {
         setPlan(nextPlan);
         setName(nextPlan?.name ?? "");
         setYearMonth(nextPlan?.yearMonth ?? "");
+        setAccessCode("");
+        setAccessCodeAction(nextPlan?.hasPassword ? "keep" : "none");
         setIsPlanLoading(false);
       },
       onError: () => {
@@ -72,8 +76,9 @@ function EditPlanForm({ planId }: { planId: string }) {
     const validation = validatePlanInput({
       name,
       yearMonth,
-      password,
-      clearPassword
+      accessCode,
+      accessCodeAction,
+      hasAccessCode: plan.hasPassword
     });
 
     if (!validation.ok) {
@@ -94,8 +99,8 @@ function EditPlanForm({ planId }: { planId: string }) {
         body: JSON.stringify({
           name,
           yearMonth,
-          password,
-          clearPassword
+          accessCode: validation.accessCode,
+          clearAccessCode: validation.clearAccessCode
         })
       });
       const result = (await response.json().catch(() => null)) as UpdatePlanResponse | null;
@@ -105,7 +110,7 @@ function EditPlanForm({ planId }: { planId: string }) {
         return;
       }
 
-      router.push(`/admin/plans/${plan.id}`);
+      router.push("/admin/plans");
     } catch {
       setError("通信に失敗しました。時間をおいて再度お試しください。");
     } finally {
@@ -148,16 +153,15 @@ function EditPlanForm({ planId }: { planId: string }) {
           <p className="breadcrumb">
             <Link href="/admin/plans">プラン一覧</Link>
             <span> / </span>
-            <Link href={`/admin/plans/${plan.id}`}>{plan.name}</Link>
-            <span> / プラン編集</span>
+            <span>プラン編集</span>
           </p>
           <h1>プラン編集</h1>
           <p className="muted-text">
             {plan.name} / {formatYearMonth(plan.yearMonth)}
           </p>
         </div>
-        <Link className="secondary-button button-link" href={`/admin/plans/${plan.id}`}>
-          プラン詳細へ戻る
+        <Link className="secondary-button button-link" href="/admin/plans">
+          プラン一覧へ戻る
         </Link>
       </header>
 
@@ -200,40 +204,95 @@ function EditPlanForm({ planId }: { planId: string }) {
           </label>
 
           <div className="notice-message">
-            プランパスワードの変更は招待者へ自動通知されません。必要に応じてLINE等で連絡してください。
+            アクセスコードの変更は招待者へ自動通知されません。必要に応じてLINE等で連絡してください。
           </div>
 
-          <label className="field">
-            <span>新しいプランパスワード</span>
-            <input
-              autoComplete="new-password"
-              disabled={isSubmitting || !plan.isActive || clearPassword}
-              maxLength={100}
-              onChange={(event) => setPassword(event.target.value)}
-              type="password"
-              value={password}
-            />
-            <span className="field-hint">
-              未入力のまま保存すると、現在の設定を維持します。
-            </span>
-          </label>
-
-          {plan.hasPassword ? (
-            <label className="checkbox-field">
-              <input
-                checked={clearPassword}
-                disabled={isSubmitting || !plan.isActive}
-                onChange={(event) => {
-                  setClearPassword(event.target.checked);
-                  if (event.target.checked) {
-                    setPassword("");
-                  }
-                }}
-                type="checkbox"
-              />
-              <span>プランパスワードを解除する</span>
-            </label>
-          ) : null}
+          <fieldset className="option-fieldset">
+            <legend>アクセスコード</legend>
+            <p className="setting-summary">
+              現在の設定：{plan.hasPassword ? "アクセスコードあり" : "アクセスコードなし"}
+            </p>
+            <p className="field-hint">アクセスコードは6〜12桁の数字で入力してください。</p>
+            <div className="radio-group">
+              {plan.hasPassword ? (
+                <>
+                  <label className="radio-field">
+                    <input
+                      checked={accessCodeAction === "keep"}
+                      disabled={isSubmitting || !plan.isActive}
+                      onChange={() => {
+                        setAccessCodeAction("keep");
+                        setAccessCode("");
+                      }}
+                      type="radio"
+                    />
+                    <span>現在のアクセスコードを維持する</span>
+                  </label>
+                  <label className="radio-field">
+                    <input
+                      checked={accessCodeAction === "clear"}
+                      disabled={isSubmitting || !plan.isActive}
+                      onChange={() => {
+                        setAccessCodeAction("clear");
+                        setAccessCode("");
+                      }}
+                      type="radio"
+                    />
+                    <span>アクセスコードを解除する</span>
+                  </label>
+                  <label className="radio-field">
+                    <input
+                      checked={accessCodeAction === "change"}
+                      disabled={isSubmitting || !plan.isActive}
+                      onChange={() => setAccessCodeAction("change")}
+                      type="radio"
+                    />
+                    <span>別のアクセスコードを設定する</span>
+                  </label>
+                </>
+              ) : (
+                <>
+                  <label className="radio-field">
+                    <input
+                      checked={accessCodeAction === "none"}
+                      disabled={isSubmitting || !plan.isActive}
+                      onChange={() => {
+                        setAccessCodeAction("none");
+                        setAccessCode("");
+                      }}
+                      type="radio"
+                    />
+                    <span>アクセスコードを設定しない</span>
+                  </label>
+                  <label className="radio-field">
+                    <input
+                      checked={accessCodeAction === "set"}
+                      disabled={isSubmitting || !plan.isActive}
+                      onChange={() => setAccessCodeAction("set")}
+                      type="radio"
+                    />
+                    <span>アクセスコードを設定する</span>
+                  </label>
+                </>
+              )}
+            </div>
+            {accessCodeAction === "change" || accessCodeAction === "set" ? (
+              <label className="field nested-field">
+                <span>アクセスコード</span>
+                <input
+                  autoComplete="new-password"
+                  disabled={isSubmitting || !plan.isActive}
+                  inputMode="numeric"
+                  maxLength={12}
+                  onChange={(event) => setAccessCode(event.target.value)}
+                  pattern="[0-9]*"
+                  type="text"
+                  value={accessCode}
+                />
+                <span className="field-hint">6〜12桁の数字</span>
+              </label>
+            ) : null}
+          </fieldset>
 
           {error ? <p className="error-message">{error}</p> : null}
 
@@ -245,7 +304,7 @@ function EditPlanForm({ planId }: { planId: string }) {
             >
               {isSubmitting ? "保存中" : "保存"}
             </button>
-            <Link className="secondary-button button-link" href={`/admin/plans/${plan.id}`}>
+            <Link className="secondary-button button-link" href="/admin/plans">
               キャンセル
             </Link>
           </div>
@@ -258,9 +317,12 @@ function EditPlanForm({ planId }: { planId: string }) {
 function validatePlanInput(input: {
   name: string;
   yearMonth: string;
-  password: string;
-  clearPassword: boolean;
-}): { ok: true } | { ok: false; message: string } {
+  accessCode: string;
+  accessCodeAction: AccessCodeAction;
+  hasAccessCode: boolean;
+}):
+  | { ok: true; accessCode: string; clearAccessCode: boolean }
+  | { ok: false; message: string } {
   if (!input.name.trim()) {
     return { ok: false, message: "プラン名を入力してください。" };
   }
@@ -273,16 +335,52 @@ function validatePlanInput(input: {
     return { ok: false, message: "年月を選択してください。" };
   }
 
-  if (input.password.length > 100) {
-    return { ok: false, message: "プランパスワードは100文字以内で入力してください。" };
+  if (input.hasAccessCode) {
+    if (
+      input.accessCodeAction !== "keep" &&
+      input.accessCodeAction !== "clear" &&
+      input.accessCodeAction !== "change"
+    ) {
+      return { ok: false, message: "アクセスコードの操作を選択してください。" };
+    }
+
+    if (input.accessCodeAction === "keep") {
+      return { ok: true, accessCode: "", clearAccessCode: false };
+    }
+
+    if (input.accessCodeAction === "clear") {
+      return { ok: true, accessCode: "", clearAccessCode: true };
+    }
+
+    return validateAccessCode(input.accessCode);
   }
 
-  if (input.clearPassword && input.password.length > 0) {
+  if (input.accessCodeAction !== "none" && input.accessCodeAction !== "set") {
+    return { ok: false, message: "アクセスコードの操作を選択してください。" };
+  }
+
+  if (input.accessCodeAction === "none") {
+    return { ok: true, accessCode: "", clearAccessCode: false };
+  }
+
+  return validateAccessCode(input.accessCode);
+}
+
+function validateAccessCode(accessCodeValue: string):
+  | { ok: true; accessCode: string; clearAccessCode: false }
+  | { ok: false; message: string } {
+  const accessCode = accessCodeValue.trim();
+
+  if (!accessCode) {
+    return { ok: false, message: "アクセスコードを入力してください。" };
+  }
+
+  if (!/^\d{6,12}$/.test(accessCode)) {
     return {
       ok: false,
-      message: "プランパスワードを解除する場合は、新しいパスワードを空にしてください。"
+      message: "アクセスコードは6〜12桁の数字で入力してください。"
     };
   }
 
-  return { ok: true };
+  return { ok: true, accessCode, clearAccessCode: false };
 }

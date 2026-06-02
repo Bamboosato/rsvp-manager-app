@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
 import { getFirebaseClientFirestore } from "@/lib/firebase/client";
@@ -33,7 +33,9 @@ function AdminPlansDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [disablingPlanId, setDisablingPlanId] = useState<string | null>(null);
+  const [copiedPlanId, setCopiedPlanId] = useState<string | null>(null);
+  const [deletingPlanId, setDeletingPlanId] = useState<string | null>(null);
+  const copyFeedbackTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!db || !user) {
@@ -63,6 +65,14 @@ function AdminPlansDashboard() {
   }, [db, user]);
 
   useEffect(() => {
+    return () => {
+      if (copyFeedbackTimerRef.current) {
+        window.clearTimeout(copyFeedbackTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     if (!db || !user) {
       return undefined;
     }
@@ -78,7 +88,6 @@ function AdminPlansDashboard() {
   }, [db, user]);
 
   const activePlans = plans.filter((plan) => plan.isActive);
-  const inactivePlans = plans.filter((plan) => !plan.isActive);
   const canCreatePlan = activePlans.length < maxActivePlans;
   const activeEventCounts = useMemo(() => {
     return events.reduce<Record<string, number>>((counts, event) => {
@@ -95,17 +104,25 @@ function AdminPlansDashboard() {
     setError("");
     setNotice("");
 
-    if (!plan.isActive) {
-      setError("無効化済みプランのURLは共有できません。");
-      return;
-    }
-
     try {
       await navigator.clipboard.writeText(buildInviteUrl(plan.publicToken));
-      setNotice("配信用URLをコピーしました。");
+      showCopyFeedback(plan.id);
     } catch {
       setError("URLコピーに失敗しました。ブラウザの設定を確認してください。");
     }
+  }
+
+  function showCopyFeedback(planId: string) {
+    setCopiedPlanId(planId);
+
+    if (copyFeedbackTimerRef.current) {
+      window.clearTimeout(copyFeedbackTimerRef.current);
+    }
+
+    copyFeedbackTimerRef.current = window.setTimeout(() => {
+      setCopiedPlanId((currentPlanId) => (currentPlanId === planId ? null : currentPlanId));
+      copyFeedbackTimerRef.current = null;
+    }, 3000);
   }
 
   async function handleDisablePlan(plan: AdminPlan) {
@@ -113,22 +130,22 @@ function AdminPlansDashboard() {
     setNotice("");
 
     const confirmed = window.confirm(
-      `「${plan.name}」を無効化します。招待者はこの配信用URLから回答できなくなります。`
+      `プラン「${plan.name}」を削除します。招待URLからもアクセスできなくなります。よろしいですか？`
     );
 
     if (!confirmed || !db) {
       return;
     }
 
-    setDisablingPlanId(plan.id);
+    setDeletingPlanId(plan.id);
 
     try {
       await disablePlan(db, plan.id);
-      setNotice("プランを無効化しました。");
+      setNotice("プランを削除しました。");
     } catch {
-      setError("プランの無効化に失敗しました。");
+      setError("プランの削除に失敗しました。");
     } finally {
-      setDisablingPlanId(null);
+      setDeletingPlanId(null);
     }
   }
 
@@ -136,7 +153,7 @@ function AdminPlansDashboard() {
     <main className="app-shell">
       <header className="top-bar">
         <div>
-          <p className="eyebrow">RSVP Manager</p>
+          <p className="eyebrow">RSVP Hub</p>
           <h1>プラン一覧</h1>
           <p className="muted-text">{user?.email}</p>
         </div>
@@ -151,9 +168,13 @@ function AdminPlansDashboard() {
       </header>
 
       <section className="summary-grid" aria-label="プランサマリー">
-        <SummaryCard label="有効プラン" value={`${activePlans.length} / ${maxActivePlans}`} />
-        <SummaryCard label="無効プラン" value={String(inactivePlans.length)} />
-        <SummaryCard label="全プラン" value={String(plans.length)} />
+        <SummaryCard label="プラン数" value={`${activePlans.length} / ${maxActivePlans}`} />
+        <SummaryCard
+          label="イベント数"
+          value={String(
+            activePlans.reduce((total, plan) => total + (activeEventCounts[plan.id] ?? 0), 0)
+          )}
+        />
       </section>
 
       <section className="panel" aria-labelledby="plans-heading">
@@ -175,7 +196,7 @@ function AdminPlansDashboard() {
 
         {!canCreatePlan ? (
           <p className="notice-message top-message">
-            有効プランは最大3件までです。不要なプランを無効化すると追加できます。
+            プランは最大3件までです。不要なプランを削除すると追加できます。
           </p>
         ) : null}
 
@@ -184,7 +205,7 @@ function AdminPlansDashboard() {
 
         {isLoading ? (
           <p className="empty-state">プラン一覧を読み込んでいます。</p>
-        ) : plans.length === 0 ? (
+        ) : activePlans.length === 0 ? (
           <div className="empty-state">
             <p>まだプランがありません。</p>
             <Link className="primary-button button-link" href="/admin/plans/new">
@@ -198,35 +219,35 @@ function AdminPlansDashboard() {
                 <tr>
                   <th>プラン名</th>
                   <th>年月</th>
-                  <th>状態</th>
                   <th>イベント数</th>
-                  <th>パスワード</th>
+                  <th>アクセスコード</th>
                   <th>配信用URL</th>
                   <th>作成日時</th>
                   <th>操作</th>
                 </tr>
               </thead>
               <tbody>
-                {plans.map((plan) => (
+                {activePlans.map((plan) => (
                   <tr key={plan.id}>
                     <td className="strong-cell">{plan.name}</td>
                     <td>{formatYearMonth(plan.yearMonth)}</td>
-                    <td>
-                      <span className={plan.isActive ? "status-badge" : "status-badge muted"}>
-                        {plan.isActive ? "有効" : "無効"}
-                      </span>
-                    </td>
                     <td>{activeEventCounts[plan.id] ?? 0}</td>
                     <td>{plan.hasPassword ? "設定済み" : "未設定"}</td>
                     <td>
-                      <button
-                        className="secondary-button compact-button"
-                        disabled={!plan.isActive}
-                        onClick={() => handleCopyInviteUrl(plan)}
-                        type="button"
-                      >
-                        コピー
-                      </button>
+                      <div className="copy-feedback-wrap">
+                        <button
+                          className="secondary-button compact-button"
+                          onClick={() => handleCopyInviteUrl(plan)}
+                          type="button"
+                        >
+                          コピー
+                        </button>
+                        {copiedPlanId === plan.id ? (
+                          <span className="copy-feedback" role="status">
+                            コピーしました
+                          </span>
+                        ) : null}
+                      </div>
                     </td>
                     <td>{formatDateTime(plan.createdAt)}</td>
                     <td>
@@ -235,7 +256,7 @@ function AdminPlansDashboard() {
                           className="secondary-button compact-button button-link"
                           href={`/admin/plans/${plan.id}`}
                         >
-                          詳細
+                          イベント
                         </Link>
                         <Link
                           className="secondary-button compact-button button-link"
@@ -245,11 +266,11 @@ function AdminPlansDashboard() {
                         </Link>
                         <button
                           className="danger-button compact-button"
-                          disabled={!plan.isActive || disablingPlanId === plan.id}
+                          disabled={deletingPlanId === plan.id}
                           onClick={() => handleDisablePlan(plan)}
                           type="button"
                         >
-                          {disablingPlanId === plan.id ? "処理中" : "無効化"}
+                          {deletingPlanId === plan.id ? "処理中" : "削除"}
                         </button>
                       </div>
                     </td>

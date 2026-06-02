@@ -43,7 +43,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
       if (!passwordSession || passwordSession.planId !== plan.id) {
         return NextResponse.json(
-          { message: "プランパスワードを入力してください。" },
+          { message: "アクセスコードを入力してください。" },
           { status: 401 }
         );
       }

@@ -161,7 +161,13 @@ function NewEventForm({ planId }: { planId: string }) {
         <form className="form-stack" onSubmit={handleSubmit}>
           <label className="field">
             <span>イベント名（任意）</span>
-            <input disabled={isSubmitting || !plan.isActive} maxLength={80} name="name" type="text" />
+            <input
+              defaultValue={plan.name}
+              disabled={isSubmitting || !plan.isActive}
+              maxLength={80}
+              name="name"
+              type="text"
+            />
           </label>
 
           <label className="field">
