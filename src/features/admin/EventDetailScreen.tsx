@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
 import { formatEventDate, getEventStatusLabel } from "./events/data";
@@ -74,6 +74,7 @@ function EventDetail({ eventId }: { eventId: string }) {
   const [notice, setNotice] = useState("");
   const [editing, setEditing] = useState<EditingState>(null);
   const [pinReset, setPinReset] = useState<PinResetState>(null);
+  const isAddResponseSubmittingRef = useRef(false);
 
   const loadDetail = useCallback(async () => {
     if (!user) {
@@ -118,10 +119,16 @@ function EventDetail({ eventId }: { eventId: string }) {
   async function handleAddResponse(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    if (isAddResponseSubmittingRef.current) {
+      return;
+    }
+
     if (!user) {
       setError("ログイン状態を確認できません。");
       return;
     }
+
+    isAddResponseSubmittingRef.current = true;
 
     const formData = new FormData(event.currentTarget);
     const payload = {
@@ -150,6 +157,10 @@ function EventDetail({ eventId }: { eventId: string }) {
       } | null;
 
       if (!response.ok) {
+        if (response.status === 409) {
+          await loadDetail();
+        }
+
         setError(result?.message ?? "回答の追加に失敗しました。");
         return;
       }
@@ -160,6 +171,7 @@ function EventDetail({ eventId }: { eventId: string }) {
     } catch {
       setError("通信に失敗しました。時間をおいて再度お試しください。");
     } finally {
+      isAddResponseSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   }
