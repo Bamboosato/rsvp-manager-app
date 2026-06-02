@@ -22,6 +22,10 @@ service cloud.firestore {
       return value == null || value is string && value.size() <= maxLength;
     }
 
+    function validOptionalString(value, maxLength) {
+      return value is string && value.size() <= maxLength;
+    }
+
     function validPlanData() {
       return request.resource.data.keys().hasOnly([
           'planId',
@@ -62,6 +66,35 @@ service cloud.firestore {
         && request.resource.data.updatedAt is timestamp;
     }
 
+    function validEventData() {
+      return request.resource.data.keys().hasOnly([
+          'eventId',
+          'planId',
+          'ownerUid',
+          'name',
+          'eventDate',
+          'timeSlot',
+          'place',
+          'status',
+          'sortOrder',
+          'isActive',
+          'createdAt',
+          'updatedAt'
+        ])
+        && validString(request.resource.data.eventId, 80)
+        && validString(request.resource.data.planId, 80)
+        && request.resource.data.ownerUid == request.auth.uid
+        && validOptionalString(request.resource.data.name, 80)
+        && request.resource.data.eventDate.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && request.resource.data.timeSlot in ['AM', 'PM']
+        && validString(request.resource.data.place, 120)
+        && request.resource.data.status in ['accepting', 'closed']
+        && request.resource.data.sortOrder is number
+        && request.resource.data.isActive is bool
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.updatedAt is timestamp;
+    }
+
     function validOwnedIncomingDocument() {
       return ownsIncoming()
         && request.resource.data.createdAt is timestamp
@@ -97,11 +130,17 @@ service cloud.firestore {
 
     match /events/{eventId} {
       allow read: if ownsExisting();
-      allow create: if validOwnedIncomingDocument();
+      allow create: if ownsIncoming()
+        && request.resource.data.eventId == eventId
+        && validEventData();
       allow update: if ownsExisting()
         && ownsIncoming()
+        && request.resource.data.eventId == resource.data.eventId
         && request.resource.data.ownerUid == resource.data.ownerUid
-        && request.resource.data.createdAt == resource.data.createdAt;
+        && request.resource.data.planId == resource.data.planId
+        && request.resource.data.sortOrder == resource.data.sortOrder
+        && request.resource.data.createdAt == resource.data.createdAt
+        && validEventData();
       allow delete: if false;
     }
 

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
 import { getFirebaseClientFirestore } from "@/lib/firebase/client";
+import { subscribeOwnerEvents, type AdminEvent } from "./events/data";
 import {
   disablePlan,
   ensureEventAdminProfile,
@@ -28,6 +29,7 @@ function AdminPlansDashboard() {
   const { signOut, user } = useAuth();
   const db = useMemo(() => getFirebaseClientFirestore(), []);
   const [plans, setPlans] = useState<AdminPlan[]>([]);
+  const [events, setEvents] = useState<AdminEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -60,9 +62,34 @@ function AdminPlansDashboard() {
     });
   }, [db, user]);
 
+  useEffect(() => {
+    if (!db || !user) {
+      return undefined;
+    }
+
+    return subscribeOwnerEvents({
+      db,
+      ownerUid: user.uid,
+      onEvents: setEvents,
+      onError: () => {
+        setError("イベント件数の取得に失敗しました。");
+      }
+    });
+  }, [db, user]);
+
   const activePlans = plans.filter((plan) => plan.isActive);
   const inactivePlans = plans.filter((plan) => !plan.isActive);
   const canCreatePlan = activePlans.length < maxActivePlans;
+  const activeEventCounts = useMemo(() => {
+    return events.reduce<Record<string, number>>((counts, event) => {
+      if (!event.isActive) {
+        return counts;
+      }
+
+      counts[event.planId] = (counts[event.planId] ?? 0) + 1;
+      return counts;
+    }, {});
+  }, [events]);
 
   async function handleCopyInviteUrl(plan: AdminPlan) {
     setError("");
@@ -189,7 +216,7 @@ function AdminPlansDashboard() {
                         {plan.isActive ? "有効" : "無効"}
                       </span>
                     </td>
-                    <td>0</td>
+                    <td>{activeEventCounts[plan.id] ?? 0}</td>
                     <td>{plan.hasPassword ? "設定済み" : "未設定"}</td>
                     <td>
                       <button
@@ -204,9 +231,12 @@ function AdminPlansDashboard() {
                     <td>{formatDateTime(plan.createdAt)}</td>
                     <td>
                       <div className="row-actions">
-                        <button className="secondary-button compact-button" disabled type="button">
+                        <Link
+                          className="secondary-button compact-button button-link"
+                          href={`/admin/plans/${plan.id}`}
+                        >
                           詳細
-                        </button>
+                        </Link>
                         <button
                           className="danger-button compact-button"
                           disabled={!plan.isActive || disablingPlanId === plan.id}

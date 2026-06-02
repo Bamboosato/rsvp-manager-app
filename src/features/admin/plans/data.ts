@@ -10,6 +10,7 @@ import {
   updateDoc,
   where,
   type DocumentData,
+  type DocumentSnapshot,
   type Firestore,
   type QueryDocumentSnapshot,
   type Timestamp,
@@ -55,6 +56,36 @@ export function subscribeOwnerPlans({
     plansQuery,
     (snapshot) => {
       onPlans(snapshot.docs.map(mapPlanSnapshot));
+    },
+    (error) => {
+      onError(error);
+    }
+  );
+}
+
+export function subscribeOwnerPlan({
+  db,
+  ownerUid,
+  planId,
+  onPlan,
+  onError
+}: {
+  db: Firestore;
+  ownerUid: string;
+  planId: string;
+  onPlan: (plan: AdminPlan | null) => void;
+  onError: (error: Error) => void;
+}): Unsubscribe {
+  return onSnapshot(
+    doc(db, "plans", planId),
+    (snapshot) => {
+      if (!snapshot.exists()) {
+        onPlan(null);
+        return;
+      }
+
+      const plan = mapPlanSnapshot(snapshot);
+      onPlan(plan.ownerUid === ownerUid ? plan : null);
     },
     (error) => {
       onError(error);
@@ -114,8 +145,10 @@ export function formatDateTime(date: Date | null) {
   }).format(date);
 }
 
-function mapPlanSnapshot(snapshot: QueryDocumentSnapshot<DocumentData>): AdminPlan {
-  const data = snapshot.data();
+function mapPlanSnapshot(
+  snapshot: DocumentSnapshot<DocumentData> | QueryDocumentSnapshot<DocumentData>
+): AdminPlan {
+  const data = snapshot.data() ?? {};
 
   return {
     id: snapshot.id,

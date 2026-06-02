@@ -314,6 +314,22 @@ h3 {
   text-decoration: underline;
 }
 
+.breadcrumb {
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.breadcrumb a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.breadcrumb a:hover {
+  text-decoration: underline;
+}
+
 .top-message {
   margin-top: 16px;
 }
@@ -340,6 +356,39 @@ h3 {
 
 .stacked-heading {
   margin-bottom: 18px;
+}
+
+.info-panel {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.definition-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0;
+  width: 100%;
+}
+
+.definition-grid div {
+  min-width: 0;
+}
+
+.definition-grid dt {
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.definition-grid dd {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
 }
 
 .table-wrap {
@@ -488,6 +537,15 @@ th {
   .guest-preview,
   .auth-panel {
     padding: 14px;
+  }
+
+  .info-panel {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .definition-grid {
+    grid-template-columns: 1fr 1fr;
   }
 
   table {
