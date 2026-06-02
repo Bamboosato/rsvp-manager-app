@@ -530,6 +530,79 @@ th {
   background: var(--accent);
 }
 
+.invite-shell {
+  width: min(100% - 24px, 560px);
+  margin: 0 auto;
+  padding: 24px 0 48px;
+}
+
+.invite-header {
+  padding: 10px 0 18px;
+}
+
+.invite-panel {
+  margin-bottom: 14px;
+}
+
+.invite-event-list {
+  display: grid;
+  gap: 14px;
+}
+
+.invite-event-card {
+  display: grid;
+  gap: 16px;
+}
+
+.invite-event-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.invite-choice-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.invite-choice-row .choice-button {
+  min-height: 58px;
+}
+
+.invite-sticky-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 0.75fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.complete-response-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.complete-response-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+.complete-response-value {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+  min-width: 88px;
+}
+
+.complete-response-value strong {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
 @media (max-width: 760px) {
   .app-shell {
     width: min(100% - 20px, 520px);
@@ -594,5 +667,23 @@ th {
 
   .choice-button {
     min-height: 52px;
+  }
+
+  .invite-shell {
+    width: min(100% - 18px, 520px);
+    padding-top: 16px;
+  }
+
+  .invite-event-heading,
+  .complete-response-row {
+    grid-template-columns: 1fr;
+  }
+
+  .invite-event-heading {
+    display: grid;
+  }
+
+  .complete-response-value {
+    justify-items: start;
   }
 }

@@ -10,7 +10,9 @@
     "typecheck": "next typegen && tsc --noEmit"
   },
   "dependencies": {
+    "@opentelemetry/api": "^1.9.1",
     "firebase": "12.14.0",
+    "firebase-admin": "^13.10.0",
     "next": "16.2.7",
     "react": "19.2.7",
     "react-dom": "19.2.7"
