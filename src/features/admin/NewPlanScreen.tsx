@@ -17,15 +17,17 @@ export function NewPlanScreen() {
 function NewPlanForm() {
   const router = useRouter();
   const { user } = useAuth();
-  const [name, setName] = useState("");
-  const [yearMonth, setYearMonth] = useState(getCurrentYearMonth());
-  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
+
+    const formData = new FormData(event.currentTarget);
+    const name = String(formData.get("name") ?? "");
+    const yearMonth = String(formData.get("yearMonth") ?? "");
+    const password = String(formData.get("password") ?? "");
 
     if (!user) {
       setError("ログイン状態を確認できません。再度ログインしてください。");
@@ -91,21 +93,20 @@ function NewPlanForm() {
             <input
               disabled={isSubmitting}
               maxLength={80}
-              onChange={(event) => setName(event.target.value)}
+              name="name"
               required
               type="text"
-              value={name}
             />
           </label>
 
           <label className="field">
             <span>年月</span>
             <input
+              defaultValue={getCurrentYearMonth()}
               disabled={isSubmitting}
-              onChange={(event) => setYearMonth(event.target.value)}
+              name="yearMonth"
               required
               type="month"
-              value={yearMonth}
             />
           </label>
 
@@ -115,9 +116,8 @@ function NewPlanForm() {
               autoComplete="new-password"
               disabled={isSubmitting}
               maxLength={100}
-              onChange={(event) => setPassword(event.target.value)}
+              name="password"
               type="password"
-              value={password}
             />
             <span className="field-hint">
               設定した場合、招待者は配信用URLアクセス時に入力が必要です。
