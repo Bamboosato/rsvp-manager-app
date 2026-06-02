@@ -20,6 +20,11 @@ import {
   subscribeOwnerPlan,
   type AdminPlan
 } from "./plans/data";
+import {
+  buildEventSummaryMap,
+  subscribePlanResponses,
+  type AdminResponse
+} from "./responses/data";
 
 export function PlanDetailScreen({ planId }: { planId: string }) {
   return (
@@ -34,6 +39,7 @@ function PlanDetail({ planId }: { planId: string }) {
   const db = useMemo(() => getFirebaseClientFirestore(), []);
   const [plan, setPlan] = useState<AdminPlan | null>(null);
   const [events, setEvents] = useState<AdminEvent[]>([]);
+  const [responses, setResponses] = useState<AdminResponse[]>([]);
   const [isPlanLoading, setIsPlanLoading] = useState(true);
   const [isEventsLoading, setIsEventsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -80,8 +86,28 @@ function PlanDetail({ planId }: { planId: string }) {
     });
   }, [db, plan, user]);
 
+  useEffect(() => {
+    if (!db || !user || !plan) {
+      return undefined;
+    }
+
+    return subscribePlanResponses({
+      db,
+      ownerUid: user.uid,
+      planId: plan.id,
+      onResponses: setResponses,
+      onError: () => {
+        setError("出欠サマリーの取得に失敗しました。");
+      }
+    });
+  }, [db, plan, user]);
+
   const acceptingCount = events.filter((event) => event.status === "accepting").length;
   const closedCount = events.filter((event) => event.status === "closed").length;
+  const eventSummaryMap = useMemo(
+    () => buildEventSummaryMap(responses),
+    [responses]
+  );
 
   async function handleCopyInviteUrl() {
     setError("");
@@ -318,13 +344,20 @@ function PlanDetail({ planId }: { planId: string }) {
                       </span>
                     </td>
                     <td>
-                      <AttendanceBadges yes={0} maybe={0} no={0} />
+                      <AttendanceBadges
+                        yes={eventSummaryMap[event.id]?.yes ?? 0}
+                        maybe={eventSummaryMap[event.id]?.maybe ?? 0}
+                        no={eventSummaryMap[event.id]?.no ?? 0}
+                      />
                     </td>
                     <td>
                       <div className="row-actions">
-                        <button className="secondary-button compact-button" disabled type="button">
+                        <Link
+                          className="secondary-button compact-button button-link"
+                          href={`/admin/plans/${plan.id}/events/${event.id}`}
+                        >
                           詳細
-                        </button>
+                        </Link>
                         <button
                           className="secondary-button compact-button"
                           disabled={updatingEventId === event.id}

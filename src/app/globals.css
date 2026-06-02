@@ -263,6 +263,12 @@ h3 {
   background: var(--surface);
 }
 
+.field textarea {
+  min-height: 96px;
+  padding: 10px 12px;
+  resize: vertical;
+}
+
 .field input:focus,
 .field textarea:focus,
 .field select:focus {
@@ -356,6 +362,26 @@ h3 {
 
 .stacked-heading {
   margin-bottom: 18px;
+}
+
+.inline-form-grid {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.4fr) minmax(120px, 0.7fr) minmax(160px, 0.9fr);
+  gap: 12px;
+}
+
+.inline-form-grid.two-columns {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.action-panel {
+  margin-top: 18px;
+}
+
+.comment-cell {
+  max-width: 320px;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .info-panel {
@@ -546,6 +572,11 @@ th {
 
   .definition-grid {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .inline-form-grid,
+  .inline-form-grid.two-columns {
+    grid-template-columns: 1fr;
   }
 
   table {
