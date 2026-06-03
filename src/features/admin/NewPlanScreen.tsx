@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
+import { AdminAccountMenu } from "./AdminAccountMenu";
 
 type AccessCodeMode = "none" | "set";
 
@@ -18,7 +19,7 @@ export function NewPlanScreen() {
 
 function NewPlanForm() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { signOut, user } = useAuth();
   const [accessCodeMode, setAccessCodeMode] = useState<AccessCodeMode>("none");
   const [accessCode, setAccessCode] = useState("");
   const [error, setError] = useState("");
@@ -82,13 +83,16 @@ function NewPlanForm() {
   return (
     <main className="app-shell">
       <header className="top-bar">
-        <div>
-          <p className="eyebrow">Plans</p>
-          <h1>プラン追加</h1>
+        <div className="page-heading">
+          <div className="title-row">
+            <Link className="back-link" data-tooltip="プラン一覧へ戻る" href="/admin/plans">
+              <span>←</span>
+              <span>戻る</span>
+            </Link>
+            <h1>プラン追加</h1>
+          </div>
         </div>
-        <Link className="secondary-button button-link" href="/admin/plans">
-          プラン一覧へ戻る
-        </Link>
+        <AdminAccountMenu user={user} onSignOut={signOut} />
       </header>
 
       <section className="panel narrow-panel" aria-labelledby="new-plan-heading">
@@ -171,10 +175,19 @@ function NewPlanForm() {
           {error ? <p className="error-message">{error}</p> : null}
 
           <div className="form-actions">
-            <button className="primary-button" disabled={isSubmitting} type="submit">
+            <button
+              className="primary-button"
+              data-tooltip="プランを作成"
+              disabled={isSubmitting}
+              type="submit"
+            >
               {isSubmitting ? "保存中" : "保存"}
             </button>
-            <Link className="secondary-button button-link" href="/admin/plans">
+            <Link
+              className="secondary-button button-link"
+              data-tooltip="作成せずにプラン一覧へ戻る"
+              href="/admin/plans"
+            >
               キャンセル
             </Link>
           </div>

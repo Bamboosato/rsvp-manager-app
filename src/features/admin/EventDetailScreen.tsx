@@ -4,6 +4,8 @@ import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
+import { AdminAccountMenu } from "./AdminAccountMenu";
+import { AdminSectionMetrics } from "./AdminSectionMetrics";
 import { formatEventDate, getEventStatusLabel } from "./events/data";
 import { formatYearMonth } from "./plans/data";
 
@@ -272,9 +274,8 @@ function EventDetail({ eventId }: { eventId: string }) {
   if (isLoading) {
     return (
       <main className="app-shell">
-        <section className="panel narrow-panel">
-          <p className="eyebrow">Loading</p>
-          <h1>イベント詳細を読み込んでいます</h1>
+        <section className="loading-panel" role="status" aria-live="polite">
+          読み込み中...
         </section>
       </main>
     );
@@ -287,7 +288,11 @@ function EventDetail({ eventId }: { eventId: string }) {
           <p className="eyebrow">Not Found</p>
           <h1>イベントを表示できません</h1>
           {error ? <p className="error-message top-message">{error}</p> : null}
-          <Link className="secondary-button button-link top-message" href="/admin/plans">
+          <Link
+            className="secondary-button button-link top-message"
+            data-tooltip="プラン一覧へ戻る"
+            href="/admin/plans"
+          >
             プラン一覧へ戻る
           </Link>
         </section>
@@ -301,31 +306,17 @@ function EventDetail({ eventId }: { eventId: string }) {
   return (
     <main className="app-shell">
       <header className="top-bar">
-        <div>
-          <p className="breadcrumb">
-            <Link href="/admin/plans">プラン一覧</Link>
-            <span> / </span>
-            <Link href={planHref}>{detail.plan?.name ?? "プラン詳細"}</Link>
-            <span> / {eventTitle}</span>
-          </p>
-          <h1>{eventTitle}</h1>
-          <p className="muted-text">{user?.email}</p>
+        <div className="page-heading">
+          <div className="title-row">
+            <Link className="back-link" data-tooltip="イベント一覧へ戻る" href={planHref}>
+              <span>←</span>
+              <span>戻る</span>
+            </Link>
+            <h1>{eventTitle}</h1>
+          </div>
         </div>
-        <div className="header-actions">
-          <button className="secondary-button" type="button">
-            通知を有効にする
-          </button>
-          <button className="secondary-button" onClick={signOut} type="button">
-            ログアウト
-          </button>
-        </div>
+        <AdminAccountMenu user={user} onSignOut={signOut} />
       </header>
-
-      <section className="summary-grid" aria-label="出欠サマリー">
-        <SummaryCard label="参加" value={String(detail.summary.yes)} />
-        <SummaryCard label="未定" value={String(detail.summary.maybe)} />
-        <SummaryCard label="不参加" value={String(detail.summary.no)} />
-      </section>
 
       <section className="panel info-panel event-info-panel" aria-label="イベント情報">
         <dl className="definition-grid event-definition-grid">
@@ -368,14 +359,21 @@ function EventDetail({ eventId }: { eventId: string }) {
       {notice ? <p className="success-message top-message">{notice}</p> : null}
       {error ? <p className="error-message top-message">{error}</p> : null}
 
-      <section className="panel" aria-labelledby="responses-heading">
+      <section className="panel" aria-label="出欠内訳">
         <div className="section-heading">
           <div>
             <p className="eyebrow">Responses</p>
-            <h2 id="responses-heading">出欠内訳</h2>
+            <AdminSectionMetrics
+              metrics={[
+                { label: "出席", value: detail.summary.yes },
+                { label: "未定", value: detail.summary.maybe },
+                { label: "欠席", value: detail.summary.no }
+              ]}
+            />
           </div>
           <button
             className="primary-button"
+            data-tooltip="管理者が招待者の回答を追加"
             disabled={isSubmitting}
             onClick={() => {
               setError("");
@@ -400,7 +398,7 @@ function EventDetail({ eventId }: { eventId: string }) {
                   <th>コメント</th>
                   <th>回答日時</th>
                   <th>最終更新者</th>
-                  <th>操作</th>
+                  <th className="action-column two-actions">操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -411,10 +409,11 @@ function EventDetail({ eventId }: { eventId: string }) {
                     <td className="comment-cell">{response.comment || "-"}</td>
                     <td>{formatDateTime(response.answeredAt)}</td>
                     <td>{response.lastUpdatedBy === "admin" ? "管理者(Admin)" : "招待者(Guest)"}</td>
-                    <td>
+                    <td className="action-column two-actions">
                       <div className="row-actions">
                         <button
                           className="secondary-button compact-button"
+                          data-tooltip="この回答を修正"
                           onClick={() => {
                             setError("");
                             setNotice("");
@@ -430,6 +429,7 @@ function EventDetail({ eventId }: { eventId: string }) {
                         </button>
                         <button
                           className="secondary-button compact-button"
+                          data-tooltip="招待者のPINを再設定"
                           onClick={() => {
                             setError("");
                             setNotice("");
@@ -474,7 +474,7 @@ function EventDetail({ eventId }: { eventId: string }) {
                   <input disabled={isSubmitting} maxLength={40} name="nickname" required type="text" />
                 </label>
                 <label className="field">
-                  <span>PIN</span>
+                  <span>PIN（数字4桁）</span>
                   <input
                     disabled={isSubmitting}
                     inputMode="numeric"
@@ -488,9 +488,9 @@ function EventDetail({ eventId }: { eventId: string }) {
                 <label className="field">
                   <span>出欠</span>
                   <select defaultValue="yes" disabled={isSubmitting} name="attendanceStatus" required>
-                    <option value="yes">○ 参加</option>
+                    <option value="yes">○ 出席</option>
                     <option value="maybe">△ 未定</option>
-                    <option value="no">× 不参加</option>
+                    <option value="no">× 欠席</option>
                   </select>
                 </label>
               </div>
@@ -500,11 +500,17 @@ function EventDetail({ eventId }: { eventId: string }) {
               </label>
               {error ? <p className="error-message">{error}</p> : null}
               <div className="form-actions">
-                <button className="primary-button" disabled={isSubmitting} type="submit">
+                <button
+                  className="primary-button"
+                  data-tooltip="代理回答を保存"
+                  disabled={isSubmitting}
+                  type="submit"
+                >
                   {isSubmitting ? "保存中" : "追加"}
                 </button>
                 <button
                   className="secondary-button"
+                  data-tooltip="入力を破棄して閉じる"
                   disabled={isSubmitting}
                   onClick={() => {
                     setError("");
@@ -550,9 +556,9 @@ function EventDetail({ eventId }: { eventId: string }) {
                   }
                   value={editing.attendanceStatus}
                 >
-                  <option value="yes">○ 参加</option>
+                  <option value="yes">○ 出席</option>
                   <option value="maybe">△ 未定</option>
-                  <option value="no">× 不参加</option>
+                  <option value="no">× 欠席</option>
                 </select>
               </label>
               <label className="field">
@@ -572,11 +578,17 @@ function EventDetail({ eventId }: { eventId: string }) {
               </label>
               {error ? <p className="error-message">{error}</p> : null}
               <div className="form-actions">
-                <button className="primary-button" disabled={isSubmitting} type="submit">
+                <button
+                  className="primary-button"
+                  data-tooltip="修正内容を保存"
+                  disabled={isSubmitting}
+                  type="submit"
+                >
                   保存
                 </button>
                 <button
                   className="secondary-button"
+                  data-tooltip="修正せずに閉じる"
                   disabled={isSubmitting}
                   onClick={() => {
                     setError("");
@@ -612,7 +624,7 @@ function EventDetail({ eventId }: { eventId: string }) {
               </p>
               <div className="inline-form-grid two-columns">
                 <label className="field">
-                  <span>新PIN</span>
+                  <span>新PIN（数字4桁）</span>
                   <input
                     disabled={isSubmitting}
                     inputMode="numeric"
@@ -630,7 +642,7 @@ function EventDetail({ eventId }: { eventId: string }) {
                   />
                 </label>
                 <label className="field">
-                  <span>新PIN確認</span>
+                  <span>新PIN確認（数字4桁）</span>
                   <input
                     disabled={isSubmitting}
                     inputMode="numeric"
@@ -650,11 +662,17 @@ function EventDetail({ eventId }: { eventId: string }) {
               </div>
               {error ? <p className="error-message">{error}</p> : null}
               <div className="form-actions">
-                <button className="primary-button" disabled={isSubmitting} type="submit">
+                <button
+                  className="primary-button"
+                  data-tooltip="新しいPINにリセット"
+                  disabled={isSubmitting}
+                  type="submit"
+                >
                   リセット
                 </button>
                 <button
                   className="secondary-button"
+                  data-tooltip="PINを変更せずに閉じる"
                   disabled={isSubmitting}
                   onClick={() => {
                     setError("");
@@ -670,15 +688,6 @@ function EventDetail({ eventId }: { eventId: string }) {
         </div>
       ) : null}
     </main>
-  );
-}
-
-function SummaryCard({ label, value }: { label: string; value: string }) {
-  return (
-    <article className="summary-card">
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </article>
   );
 }
 

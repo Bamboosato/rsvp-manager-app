@@ -81,7 +81,12 @@ export function LoginForm() {
 
       {error ? <p className="error-message">{error}</p> : null}
 
-      <button className="primary-button full-width" disabled={isSubmitting} type="submit">
+      <button
+        className="primary-button full-width"
+        data-tooltip="管理画面にログイン"
+        disabled={isSubmitting}
+        type="submit"
+      >
         {isSubmitting ? "ログイン中" : "ログイン"}
       </button>
 

@@ -6,8 +6,8 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
 import { getFirebaseClientFirestore } from "@/lib/firebase/client";
+import { AdminAccountMenu } from "./AdminAccountMenu";
 import {
-  formatEventDate,
   getEventStatusLabel,
   subscribeOwnerEvent,
   updateEventDetails,
@@ -15,7 +15,7 @@ import {
   type EventStatus,
   type EventTimeSlot
 } from "./events/data";
-import { formatYearMonth, subscribeOwnerPlan, type AdminPlan } from "./plans/data";
+import { subscribeOwnerPlan, type AdminPlan } from "./plans/data";
 
 export function EditEventScreen({
   planId,
@@ -39,7 +39,7 @@ function EditEventForm({
   eventId: string;
 }) {
   const router = useRouter();
-  const { user } = useAuth();
+  const { signOut, user } = useAuth();
   const db = useMemo(() => getFirebaseClientFirestore(), []);
   const [plan, setPlan] = useState<AdminPlan | null>(null);
   const [eventDetail, setEventDetail] = useState<AdminEvent | null>(null);
@@ -147,9 +147,8 @@ function EditEventForm({
   if (isPlanLoading || isEventLoading) {
     return (
       <main className="app-shell">
-        <section className="panel narrow-panel">
-          <p className="eyebrow">Loading</p>
-          <h1>イベント情報を読み込んでいます</h1>
+        <section className="loading-panel" role="status" aria-live="polite">
+          読み込み中...
         </section>
       </main>
     );
@@ -164,7 +163,11 @@ function EditEventForm({
           <p className="muted-text">
             イベントが存在しないか、ログイン中のイベント管理者では閲覧できません。
           </p>
-          <Link className="secondary-button button-link top-message" href={`/admin/plans/${planId}`}>
+          <Link
+            className="secondary-button button-link top-message"
+            data-tooltip="イベント一覧へ戻る"
+            href={`/admin/plans/${planId}`}
+          >
             イベント一覧へ戻る
           </Link>
         </section>
@@ -177,26 +180,20 @@ function EditEventForm({
   return (
     <main className="app-shell">
       <header className="top-bar">
-        <div>
-          <p className="breadcrumb">
-            <Link href="/admin/plans">プラン一覧</Link>
-            <span> / </span>
-            <Link href={`/admin/plans/${plan.id}`}>{plan.name}</Link>
-            <span> / </span>
-            <span>イベント編集</span>
-          </p>
-          <h1>イベント編集</h1>
-          <p className="muted-text">
-            {formatYearMonth(plan.yearMonth)} / {formatEventDate(eventDetail.eventDate)}{" "}
-            {eventDetail.timeSlot}
-          </p>
+        <div className="page-heading">
+          <div className="title-row">
+            <Link
+              className="back-link"
+              data-tooltip="イベント一覧へ戻る"
+              href={`/admin/plans/${plan.id}`}
+            >
+              <span>←</span>
+              <span>戻る</span>
+            </Link>
+            <h1>イベント編集</h1>
+          </div>
         </div>
-        <Link
-          className="secondary-button button-link"
-          href={`/admin/plans/${plan.id}`}
-        >
-          イベント一覧へ戻る
-        </Link>
+        <AdminAccountMenu user={user} onSignOut={signOut} />
       </header>
 
       <section className="panel narrow-panel" aria-labelledby="edit-event-heading">
@@ -275,11 +272,17 @@ function EditEventForm({
           {error ? <p className="error-message">{error}</p> : null}
 
           <div className="form-actions">
-            <button className="primary-button" disabled={isSubmitting || !canEdit} type="submit">
+            <button
+              className="primary-button"
+              data-tooltip="イベント情報を保存"
+              disabled={isSubmitting || !canEdit}
+              type="submit"
+            >
               {isSubmitting ? "保存中" : "保存"}
             </button>
             <Link
               className="secondary-button button-link"
+              data-tooltip="変更せずにイベント一覧へ戻る"
               href={`/admin/plans/${plan.id}`}
             >
               キャンセル

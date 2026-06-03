@@ -6,8 +6,9 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
 import { getFirebaseClientFirestore } from "@/lib/firebase/client";
+import { AdminAccountMenu } from "./AdminAccountMenu";
 import { createEvent, type EventTimeSlot } from "./events/data";
-import { formatYearMonth, subscribeOwnerPlan, type AdminPlan } from "./plans/data";
+import { subscribeOwnerPlan, type AdminPlan } from "./plans/data";
 
 export function NewEventScreen({ planId }: { planId: string }) {
   return (
@@ -19,7 +20,7 @@ export function NewEventScreen({ planId }: { planId: string }) {
 
 function NewEventForm({ planId }: { planId: string }) {
   const router = useRouter();
-  const { user } = useAuth();
+  const { signOut, user } = useAuth();
   const db = useMemo(() => getFirebaseClientFirestore(), []);
   const [plan, setPlan] = useState<AdminPlan | null>(null);
   const [isPlanLoading, setIsPlanLoading] = useState(true);
@@ -99,9 +100,8 @@ function NewEventForm({ planId }: { planId: string }) {
   if (isPlanLoading) {
     return (
       <main className="app-shell">
-        <section className="panel narrow-panel">
-          <p className="eyebrow">Loading</p>
-          <h1>プラン情報を読み込んでいます</h1>
+        <section className="loading-panel" role="status" aria-live="polite">
+          読み込み中...
         </section>
       </main>
     );
@@ -116,7 +116,11 @@ function NewEventForm({ planId }: { planId: string }) {
           <p className="muted-text">
             プランが存在しないか、ログイン中のイベント管理者では閲覧できません。
           </p>
-          <Link className="secondary-button button-link top-message" href="/admin/plans">
+          <Link
+            className="secondary-button button-link top-message"
+            data-tooltip="プラン一覧へ戻る"
+            href="/admin/plans"
+          >
             プラン一覧へ戻る
           </Link>
         </section>
@@ -127,21 +131,20 @@ function NewEventForm({ planId }: { planId: string }) {
   return (
     <main className="app-shell">
       <header className="top-bar">
-        <div>
-          <p className="breadcrumb">
-            <Link href="/admin/plans">プラン一覧</Link>
-            <span> / </span>
-            <Link href={`/admin/plans/${plan.id}`}>{plan.name}</Link>
-            <span> / イベント追加</span>
-          </p>
-          <h1>イベント追加</h1>
-          <p className="muted-text">
-            {plan.name} / {formatYearMonth(plan.yearMonth)}
-          </p>
+        <div className="page-heading">
+          <div className="title-row">
+            <Link
+              className="back-link"
+              data-tooltip="イベント一覧へ戻る"
+              href={`/admin/plans/${plan.id}`}
+            >
+              <span>←</span>
+              <span>戻る</span>
+            </Link>
+            <h1>イベント追加</h1>
+          </div>
         </div>
-        <Link className="secondary-button button-link" href={`/admin/plans/${plan.id}`}>
-          イベント一覧へ戻る
-        </Link>
+        <AdminAccountMenu user={user} onSignOut={signOut} />
       </header>
 
       <section className="panel narrow-panel" aria-labelledby="new-event-heading">
@@ -204,12 +207,17 @@ function NewEventForm({ planId }: { planId: string }) {
           <div className="form-actions">
             <button
               className="primary-button"
+              data-tooltip="イベントを作成"
               disabled={isSubmitting || !plan.isActive}
               type="submit"
             >
               {isSubmitting ? "保存中" : "保存"}
             </button>
-            <Link className="secondary-button button-link" href={`/admin/plans/${plan.id}`}>
+            <Link
+              className="secondary-button button-link"
+              data-tooltip="作成せずにイベント一覧へ戻る"
+              href={`/admin/plans/${plan.id}`}
+            >
               キャンセル
             </Link>
           </div>
