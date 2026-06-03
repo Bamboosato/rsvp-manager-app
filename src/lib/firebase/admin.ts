@@ -1,7 +1,8 @@
 import { cert, getApps, initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
+import { getMessaging } from "firebase-admin/messaging";
 
-export function getFirebaseAdminFirestore() {
+function ensureFirebaseAdminApp() {
   if (!getApps().length) {
     const projectId =
       process.env.FIREBASE_ADMIN_PROJECT_ID ?? process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
@@ -20,6 +21,14 @@ export function getFirebaseAdminFirestore() {
       })
     });
   }
+}
 
+export function getFirebaseAdminFirestore() {
+  ensureFirebaseAdminApp();
   return getFirestore();
+}
+
+export function getFirebaseAdminMessaging() {
+  ensureFirebaseAdminApp();
+  return getMessaging();
 }

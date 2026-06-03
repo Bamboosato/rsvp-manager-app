@@ -8,6 +8,7 @@ import {
   toPublicPlan,
   type AttendanceStatus
 } from "@/lib/invite/server";
+import { sendInviteResponseNotification } from "@/lib/notifications/server";
 
 export const runtime = "nodejs";
 
@@ -141,6 +142,16 @@ export async function POST(request: NextRequest, context: RouteContext) {
     if (!result.ok) {
       return NextResponse.json({ message: result.message }, { status: 409 });
     }
+
+    await sendInviteResponseNotification({
+      ownerUid: plan.ownerUid,
+      planId: plan.id,
+      planName: plan.name,
+      nickname: session.nickname,
+      origin: request.nextUrl.origin
+    }).catch((error) => {
+      console.error("Failed to send invite response notification.", error);
+    });
 
     return NextResponse.json({ ok: true });
   } catch (error) {

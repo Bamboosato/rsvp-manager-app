@@ -31,10 +31,14 @@ Required values:
 - `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`
 - `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
 - `NEXT_PUBLIC_FIREBASE_APP_ID`
+- `NEXT_PUBLIC_FIREBASE_VAPID_KEY`
 - `FIREBASE_ADMIN_PROJECT_ID`
 - `FIREBASE_ADMIN_CLIENT_EMAIL`
 - `FIREBASE_ADMIN_PRIVATE_KEY`
 - `INVITE_SESSION_SECRET`
+
+`NEXT_PUBLIC_FIREBASE_VAPID_KEY` is the Web Push certificate public key from
+Firebase Console > Cloud Messaging.
 
 ## Scripts
 
@@ -61,4 +65,4 @@ npx firebase deploy --only firestore:rules,firestore:indexes
 
 ## Current Scope
 
-The current implementation includes Firebase Authentication entry points, Firestore-backed plan and event management, admin response management, PIN reset, and the invitee response flow. Push notifications are still pending.
+The current implementation includes Firebase Authentication entry points, Firestore-backed plan and event management, admin response management, PIN reset, the invitee response flow, PWA manifest/service worker support, and Firebase Cloud Messaging push notifications for invitee response updates.
