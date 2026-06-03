@@ -12,9 +12,9 @@ const attendanceChoices: Array<{
   iconSrc: string;
   label: string;
 }> = [
-  { status: "yes", iconSrc: "/icons/attendance-yes.svg", label: "参加" },
+  { status: "yes", iconSrc: "/icons/attendance-yes.svg", label: "出席" },
   { status: "maybe", iconSrc: "/icons/attendance-maybe.svg", label: "未定" },
-  { status: "no", iconSrc: "/icons/attendance-no.svg", label: "不参加" }
+  { status: "no", iconSrc: "/icons/attendance-no.svg", label: "欠席" }
 ];
 
 type PublicPlan = {
@@ -103,7 +103,7 @@ export function InviteStartScreen({ publicToken }: { publicToken: string }) {
   }
 
   if (isLoading) {
-    return <InviteMessage title="読み込んでいます" eyebrow="Loading" />;
+    return <InviteLoading />;
   }
 
   if (!plan) {
@@ -141,13 +141,19 @@ export function InviteStartScreen({ publicToken }: { publicToken: string }) {
               <span className="field-hint">6〜12桁の数字</span>
             </label>
             {error ? <p className="error-message">{error}</p> : null}
-            <button className="primary-button full-width" disabled={isSubmitting} type="submit">
+            <button
+              className="primary-button full-width"
+              data-tooltip="アクセスコードを確認して次へ進む"
+              disabled={isSubmitting}
+              type="submit"
+            >
               {isSubmitting ? "確認中" : "次へ"}
             </button>
           </form>
         ) : (
           <Link
             className="primary-button button-link full-width top-message"
+            data-tooltip="ニックネームとPINの入力へ進む"
             href={`/invite/${publicToken}/entry`}
           >
             出欠入力へ進む
@@ -203,7 +209,7 @@ export function InviteEntryScreen({ publicToken }: { publicToken: string }) {
   }
 
   if (isLoading) {
-    return <InviteMessage title="読み込んでいます" eyebrow="Loading" />;
+    return <InviteLoading />;
   }
 
   if (!plan) {
@@ -237,7 +243,7 @@ export function InviteEntryScreen({ publicToken }: { publicToken: string }) {
             />
           </label>
           <label className="field">
-            <span>4桁のPIN</span>
+            <span>PIN（数字4桁）</span>
             <input
               disabled={isSubmitting}
               inputMode="numeric"
@@ -250,7 +256,12 @@ export function InviteEntryScreen({ publicToken }: { publicToken: string }) {
             />
           </label>
           {error ? <p className="error-message">{error}</p> : null}
-          <button className="primary-button full-width" disabled={isSubmitting} type="submit">
+          <button
+            className="primary-button full-width"
+            data-tooltip="ニックネームとPINを確認して次へ進む"
+            disabled={isSubmitting}
+            type="submit"
+          >
             {isSubmitting ? "確認中" : "次へ"}
           </button>
         </form>
@@ -369,7 +380,7 @@ export function InviteResponsesScreen({ publicToken }: { publicToken: string }) 
   }
 
   if (isLoading) {
-    return <InviteMessage title="読み込んでいます" eyebrow="Loading" />;
+    return <InviteLoading />;
   }
 
   if (!detail) {
@@ -419,11 +430,16 @@ export function InviteResponsesScreen({ publicToken }: { publicToken: string }) 
         {error ? <p className="error-message">{error}</p> : null}
 
         <div className="invite-sticky-actions">
-          <Link className="secondary-button button-link" href={`/invite/${publicToken}/entry`}>
+          <Link
+            className="secondary-button button-link"
+            data-tooltip="ニックネームとPIN入力へ戻る"
+            href={`/invite/${publicToken}/entry`}
+          >
             戻る
           </Link>
           <button
             className="primary-button"
+            data-tooltip="選択した出欠を保存"
             disabled={isSubmitting || detail.events.every((event) => event.status === "closed")}
             type="submit"
           >
@@ -465,7 +481,7 @@ export function InviteCompleteScreen({ publicToken }: { publicToken: string }) {
   }, [publicToken]);
 
   if (isLoading) {
-    return <InviteMessage title="読み込んでいます" eyebrow="Loading" />;
+    return <InviteLoading />;
   }
 
   if (!detail) {
@@ -564,6 +580,7 @@ function InviteEventCard({
                 ? "choice-button selected"
                 : "choice-button"
             }
+            data-tooltip={choice.label}
             disabled={disabled || isClosed}
             key={choice.status}
             onClick={() =>
@@ -600,6 +617,16 @@ function InviteEventCard({
   );
 }
 
+function InviteLoading() {
+  return (
+    <main className="invite-shell">
+      <section className="loading-panel" role="status" aria-live="polite">
+        読み込み中...
+      </section>
+    </main>
+  );
+}
+
 function InviteMessage({
   eyebrow,
   title,
@@ -620,7 +647,11 @@ function InviteMessage({
         <h1>{title}</h1>
         {message ? <p className="error-message top-message">{message}</p> : null}
         {actionHref && actionLabel ? (
-          <Link className="primary-button button-link full-width top-message" href={actionHref}>
+          <Link
+            className="primary-button button-link full-width top-message"
+            data-tooltip={actionLabel}
+            href={actionHref}
+          >
             {actionLabel}
           </Link>
         ) : null}

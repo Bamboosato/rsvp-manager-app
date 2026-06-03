@@ -4,7 +4,10 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
+import { ConfirmDialog } from "@/features/ui/ConfirmDialog";
 import { getFirebaseClientFirestore } from "@/lib/firebase/client";
+import { AdminAccountMenu } from "./AdminAccountMenu";
+import { AdminSectionMetrics } from "./AdminSectionMetrics";
 import {
   disableEvent,
   formatEventDate,
@@ -47,6 +50,11 @@ function PlanDetail({ planId }: { planId: string }) {
   const [isInviteUrlCopied, setIsInviteUrlCopied] = useState(false);
   const [statusFeedbackEventId, setStatusFeedbackEventId] = useState<string | null>(null);
   const [updatingEventId, setUpdatingEventId] = useState<string | null>(null);
+  const [statusChangeTarget, setStatusChangeTarget] = useState<{
+    event: AdminEvent;
+    nextStatus: EventStatus;
+  } | null>(null);
+  const [deleteTargetEvent, setDeleteTargetEvent] = useState<AdminEvent | null>(null);
   const copyFeedbackTimerRef = useRef<number | null>(null);
   const statusFeedbackTimerRef = useRef<number | null>(null);
 
@@ -154,25 +162,22 @@ function PlanDetail({ planId }: { planId: string }) {
     }, 3000);
   }
 
-  async function handleChangeEventStatus(event: AdminEvent, nextStatus: EventStatus) {
-    if (!db) {
-      return;
-    }
-
+  function requestChangeEventStatus(event: AdminEvent, nextStatus: EventStatus) {
     if (event.status === nextStatus) {
       return;
     }
 
-    const label = getEventTitle(event);
-    const confirmed = window.confirm(
-      nextStatus === "closed"
-        ? `イベント「${label}」を締切済にします。招待者はこのイベントの出欠を変更できなくなります。よろしいですか？`
-        : `イベント「${label}」を受付中に戻します。招待者がこのイベントの出欠を変更できるようになります。よろしいですか？`
-    );
+    setError("");
+    setNotice("");
+    setStatusChangeTarget({ event, nextStatus });
+  }
 
-    if (!confirmed) {
+  async function handleChangeEventStatus() {
+    if (!db || !statusChangeTarget) {
       return;
     }
+
+    const { event, nextStatus } = statusChangeTarget;
 
     setError("");
     setNotice("");
@@ -185,8 +190,10 @@ function PlanDetail({ planId }: { planId: string }) {
         status: nextStatus
       });
       showStatusFeedback(event.id);
+      setStatusChangeTarget(null);
     } catch {
       setError("イベントステータスの変更に失敗しました。");
+      setStatusChangeTarget(null);
     } finally {
       setUpdatingEventId(null);
     }
@@ -205,29 +212,26 @@ function PlanDetail({ planId }: { planId: string }) {
     }, 3000);
   }
 
-  async function handleDeleteEvent(event: AdminEvent) {
-    if (!db) {
-      return;
-    }
-
-    const label = getEventTitle(event);
-    const confirmed = window.confirm(
-      `イベント「${label}」を削除します。招待者画面には表示されなくなります。よろしいですか？`
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
+  function requestDeleteEvent(event: AdminEvent) {
     setError("");
     setNotice("");
-    setUpdatingEventId(event.id);
+    setDeleteTargetEvent(event);
+  }
+
+  async function handleDeleteEvent() {
+    if (!db || !deleteTargetEvent) {
+      return;
+    }
+
+    setUpdatingEventId(deleteTargetEvent.id);
 
     try {
-      await disableEvent(db, event.id);
+      await disableEvent(db, deleteTargetEvent.id);
       setNotice("イベントを削除しました。");
+      setDeleteTargetEvent(null);
     } catch {
       setError("イベントの削除に失敗しました。");
+      setDeleteTargetEvent(null);
     } finally {
       setUpdatingEventId(null);
     }
@@ -236,9 +240,8 @@ function PlanDetail({ planId }: { planId: string }) {
   if (isPlanLoading) {
     return (
       <main className="app-shell">
-        <section className="panel narrow-panel">
-          <p className="eyebrow">Loading</p>
-          <h1>プラン情報を読み込んでいます</h1>
+        <section className="loading-panel" role="status" aria-live="polite">
+          読み込み中...
         </section>
       </main>
     );
@@ -253,7 +256,11 @@ function PlanDetail({ planId }: { planId: string }) {
           <p className="muted-text">
             プランが存在しないか、ログイン中のイベント管理者では閲覧できません。
           </p>
-          <Link className="secondary-button button-link top-message" href="/admin/plans">
+          <Link
+            className="secondary-button button-link top-message"
+            data-tooltip="プラン一覧へ戻る"
+            href="/admin/plans"
+          >
             プラン一覧へ戻る
           </Link>
         </section>
@@ -264,30 +271,17 @@ function PlanDetail({ planId }: { planId: string }) {
   return (
     <main className="app-shell">
       <header className="top-bar">
-        <div>
-          <p className="breadcrumb">
-            <Link href="/admin/plans">プラン一覧</Link>
-            <span> / </span>
-            <span>{plan.name}</span>
-          </p>
-          <h1>{plan.name}</h1>
-          <p className="muted-text">{user?.email}</p>
+        <div className="page-heading">
+          <div className="title-row">
+            <Link className="back-link" data-tooltip="プラン一覧へ戻る" href="/admin/plans">
+              <span>←</span>
+              <span>戻る</span>
+            </Link>
+            <h1>{plan.name}</h1>
+          </div>
         </div>
-        <div className="header-actions">
-          <button className="secondary-button" type="button">
-            通知を有効にする
-          </button>
-          <button className="secondary-button" onClick={signOut} type="button">
-            ログアウト
-          </button>
-        </div>
+        <AdminAccountMenu user={user} onSignOut={signOut} />
       </header>
-
-      <section className="summary-grid" aria-label="イベントサマリー">
-        <SummaryCard label="有効イベント" value={String(events.length)} />
-        <SummaryCard label="受付中" value={String(acceptingCount)} />
-        <SummaryCard label="締切済" value={String(closedCount)} />
-      </section>
 
       <section className="panel info-panel" aria-label="プラン情報">
         <dl className="definition-grid">
@@ -316,6 +310,7 @@ function PlanDetail({ planId }: { planId: string }) {
           <div className="copy-feedback-wrap">
             <button
               className="secondary-button"
+              data-tooltip="招待者へ送る共有URLをコピー"
               disabled={!plan.isActive}
               onClick={handleCopyInviteUrl}
               type="button"
@@ -331,21 +326,33 @@ function PlanDetail({ planId }: { planId: string }) {
         </div>
       </section>
 
-      <section className="panel" aria-labelledby="events-heading">
+      <section className="panel" aria-label="イベント一覧">
         <div className="section-heading">
           <div>
             <p className="eyebrow">Events</p>
-            <h2 id="events-heading">イベント一覧</h2>
+            <AdminSectionMetrics
+              metrics={[
+                { label: "イベント数", value: events.length },
+                { label: "受付中", value: acceptingCount },
+                { label: "締切済", value: closedCount }
+              ]}
+            />
           </div>
           {plan.isActive ? (
             <Link
               className="primary-button button-link"
+              data-tooltip="このプランにイベントを追加"
               href={`/admin/plans/${plan.id}/events/new`}
             >
               イベント追加
             </Link>
           ) : (
-            <button className="primary-button" disabled type="button">
+            <button
+              className="primary-button"
+              data-tooltip="無効なプランにはイベントを追加できません"
+              disabled
+              type="button"
+            >
               イベント追加
             </button>
           )}
@@ -360,13 +367,16 @@ function PlanDetail({ planId }: { planId: string }) {
         {error ? <p className="error-message top-message">{error}</p> : null}
 
         {isEventsLoading ? (
-          <p className="empty-state">イベント一覧を読み込んでいます。</p>
+          <p className="loading-inline" role="status" aria-live="polite">
+            読み込み中...
+          </p>
         ) : events.length === 0 ? (
           <div className="empty-state">
             <p>まだイベントはありません。</p>
             {plan.isActive ? (
               <Link
                 className="primary-button button-link"
+                data-tooltip="最初のイベントを作成"
                 href={`/admin/plans/${plan.id}/events/new`}
               >
                 最初のイベントを追加
@@ -382,9 +392,9 @@ function PlanDetail({ planId }: { planId: string }) {
                   <th>日程</th>
                   <th>時間帯</th>
                   <th>場所</th>
-                  <th>状態</th>
-                  <th>出欠</th>
-                  <th>操作</th>
+                  <th className="status-column">状態</th>
+                  <th className="attendance-column">出欠</th>
+                  <th className="action-column three-actions">操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -394,7 +404,7 @@ function PlanDetail({ planId }: { planId: string }) {
                     <td>{formatEventDate(event.eventDate)}</td>
                     <td>{event.timeSlot}</td>
                     <td>{event.place}</td>
-                    <td>
+                    <td className="status-column">
                       <div className="status-feedback-wrap">
                         <div
                           className="status-segment"
@@ -407,8 +417,9 @@ function PlanDetail({ planId }: { planId: string }) {
                                 ? "status-segment-button active"
                                 : "status-segment-button"
                             }
+                            data-tooltip="受付中に変更"
                             disabled={updatingEventId === event.id}
-                            onClick={() => handleChangeEventStatus(event, "accepting")}
+                            onClick={() => requestChangeEventStatus(event, "accepting")}
                             type="button"
                           >
                             受付中
@@ -420,8 +431,9 @@ function PlanDetail({ planId }: { planId: string }) {
                                 ? "status-segment-button active muted"
                                 : "status-segment-button"
                             }
+                            data-tooltip="締切済に変更"
                             disabled={updatingEventId === event.id}
-                            onClick={() => handleChangeEventStatus(event, "closed")}
+                            onClick={() => requestChangeEventStatus(event, "closed")}
                             type="button"
                           >
                             締切済
@@ -434,31 +446,34 @@ function PlanDetail({ planId }: { planId: string }) {
                         ) : null}
                       </div>
                     </td>
-                    <td>
+                    <td className="attendance-column">
                       <AttendanceBadges
                         yes={eventSummaryMap[event.id]?.yes ?? 0}
                         maybe={eventSummaryMap[event.id]?.maybe ?? 0}
                         no={eventSummaryMap[event.id]?.no ?? 0}
                       />
                     </td>
-                    <td>
+                    <td className="action-column three-actions">
                       <div className="row-actions">
                         <Link
                           className="secondary-button compact-button button-link"
+                          data-tooltip="このイベントの出欠内訳を表示"
                           href={`/admin/plans/${plan.id}/events/${event.id}`}
                         >
                           出欠内訳
                         </Link>
                         <Link
                           className="secondary-button compact-button button-link"
+                          data-tooltip="イベント情報を編集"
                           href={`/admin/plans/${plan.id}/events/${event.id}/edit`}
                         >
                           編集
                         </Link>
                         <button
                           className="danger-button compact-button"
+                          data-tooltip="このイベントを削除"
                           disabled={updatingEventId === event.id}
-                          onClick={() => handleDeleteEvent(event)}
+                          onClick={() => requestDeleteEvent(event)}
                           type="button"
                         >
                           削除
@@ -472,16 +487,32 @@ function PlanDetail({ planId }: { planId: string }) {
           </div>
         )}
       </section>
-    </main>
-  );
-}
 
-function SummaryCard({ label, value }: { label: string; value: string }) {
-  return (
-    <article className="summary-card">
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </article>
+      {statusChangeTarget ? (
+        <ConfirmDialog
+          confirmLabel={
+            statusChangeTarget.nextStatus === "closed" ? "締切済にする" : "受付中に戻す"
+          }
+          isProcessing={updatingEventId === statusChangeTarget.event.id}
+          message={buildStatusChangeMessage(statusChangeTarget.event, statusChangeTarget.nextStatus)}
+          onCancel={() => setStatusChangeTarget(null)}
+          onConfirm={handleChangeEventStatus}
+          title="ステータス変更の確認"
+        />
+      ) : null}
+
+      {deleteTargetEvent ? (
+        <ConfirmDialog
+          confirmLabel="削除する"
+          isProcessing={updatingEventId === deleteTargetEvent.id}
+          message={`イベント「${getEventTitle(deleteTargetEvent)}」を削除します。招待者画面には表示されなくなります。`}
+          onCancel={() => setDeleteTargetEvent(null)}
+          onConfirm={handleDeleteEvent}
+          title="イベント削除の確認"
+          variant="danger"
+        />
+      ) : null}
+    </main>
   );
 }
 
@@ -505,4 +536,14 @@ function AttendanceBadges({
 
 function getEventTitle(event: AdminEvent) {
   return event.name || "イベント名未設定";
+}
+
+function buildStatusChangeMessage(event: AdminEvent, nextStatus: EventStatus) {
+  const label = getEventTitle(event);
+
+  if (nextStatus === "closed") {
+    return `イベント「${label}」を締切済にします。招待者はこのイベントの出欠を変更できなくなります。`;
+  }
+
+  return `イベント「${label}」を受付中に戻します。招待者がこのイベントの出欠を変更できるようになります。`;
 }

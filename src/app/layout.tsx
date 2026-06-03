@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { AuthProvider } from "@/features/auth/AuthProvider";
 import { ServiceWorkerRegistration } from "@/features/pwa/ServiceWorkerRegistration";
+import { GlobalTooltip } from "@/features/ui/GlobalTooltip";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -30,6 +31,8 @@ export default function RootLayout({
         <AuthProvider>
           <ServiceWorkerRegistration />
           {children}
+          <GlobalTooltip />
+          <footer className="app-footer">© 2026 Bamboosatov1.0.0</footer>
         </AuthProvider>
       </body>
     </html>

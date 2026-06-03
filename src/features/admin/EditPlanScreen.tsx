@@ -6,7 +6,8 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
 import { getFirebaseClientFirestore } from "@/lib/firebase/client";
-import { formatYearMonth, subscribeOwnerPlan, type AdminPlan } from "./plans/data";
+import { AdminAccountMenu } from "./AdminAccountMenu";
+import { subscribeOwnerPlan, type AdminPlan } from "./plans/data";
 
 type UpdatePlanResponse = {
   message?: string;
@@ -24,7 +25,7 @@ export function EditPlanScreen({ planId }: { planId: string }) {
 
 function EditPlanForm({ planId }: { planId: string }) {
   const router = useRouter();
-  const { user } = useAuth();
+  const { signOut, user } = useAuth();
   const db = useMemo(() => getFirebaseClientFirestore(), []);
   const [plan, setPlan] = useState<AdminPlan | null>(null);
   const [name, setName] = useState("");
@@ -121,9 +122,8 @@ function EditPlanForm({ planId }: { planId: string }) {
   if (isPlanLoading) {
     return (
       <main className="app-shell">
-        <section className="panel narrow-panel">
-          <p className="eyebrow">Loading</p>
-          <h1>プラン情報を読み込んでいます</h1>
+        <section className="loading-panel" role="status" aria-live="polite">
+          読み込み中...
         </section>
       </main>
     );
@@ -138,7 +138,11 @@ function EditPlanForm({ planId }: { planId: string }) {
           <p className="muted-text">
             プランが存在しないか、ログイン中のイベント管理者では閲覧できません。
           </p>
-          <Link className="secondary-button button-link top-message" href="/admin/plans">
+          <Link
+            className="secondary-button button-link top-message"
+            data-tooltip="プラン一覧へ戻る"
+            href="/admin/plans"
+          >
             プラン一覧へ戻る
           </Link>
         </section>
@@ -149,20 +153,16 @@ function EditPlanForm({ planId }: { planId: string }) {
   return (
     <main className="app-shell">
       <header className="top-bar">
-        <div>
-          <p className="breadcrumb">
-            <Link href="/admin/plans">プラン一覧</Link>
-            <span> / </span>
-            <span>プラン編集</span>
-          </p>
-          <h1>プラン編集</h1>
-          <p className="muted-text">
-            {plan.name} / {formatYearMonth(plan.yearMonth)}
-          </p>
+        <div className="page-heading">
+          <div className="title-row">
+            <Link className="back-link" data-tooltip="プラン一覧へ戻る" href="/admin/plans">
+              <span>←</span>
+              <span>戻る</span>
+            </Link>
+            <h1>プラン編集</h1>
+          </div>
         </div>
-        <Link className="secondary-button button-link" href="/admin/plans">
-          プラン一覧へ戻る
-        </Link>
+        <AdminAccountMenu user={user} onSignOut={signOut} />
       </header>
 
       <section className="panel narrow-panel" aria-labelledby="edit-plan-heading">
@@ -299,12 +299,17 @@ function EditPlanForm({ planId }: { planId: string }) {
           <div className="form-actions">
             <button
               className="primary-button"
+              data-tooltip="プラン情報を保存"
               disabled={isSubmitting || !plan.isActive}
               type="submit"
             >
               {isSubmitting ? "保存中" : "保存"}
             </button>
-            <Link className="secondary-button button-link" href="/admin/plans">
+            <Link
+              className="secondary-button button-link"
+              data-tooltip="変更せずにプラン一覧へ戻る"
+              href="/admin/plans"
+            >
               キャンセル
             </Link>
           </div>

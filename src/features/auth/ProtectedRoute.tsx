@@ -32,9 +32,8 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
   if (isLoading) {
     return (
       <main className="app-shell">
-        <section className="panel narrow-panel">
-          <p className="eyebrow">Loading</p>
-          <h1>認証状態を確認しています</h1>
+        <section className="loading-panel" role="status" aria-live="polite">
+          読み込み中...
         </section>
       </main>
     );

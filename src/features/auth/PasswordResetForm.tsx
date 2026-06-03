@@ -57,7 +57,12 @@ export function PasswordResetForm() {
 
       {error ? <p className="error-message">{error}</p> : null}
 
-      <button className="primary-button full-width" disabled={isSubmitting} type="submit">
+      <button
+        className="primary-button full-width"
+        data-tooltip="パスワード再設定メールを送信"
+        disabled={isSubmitting}
+        type="submit"
+      >
         {isSubmitting ? "送信中" : "リセットメールを送信"}
       </button>
 

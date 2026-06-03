@@ -4,11 +4,10 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
-import {
-  getNotificationButtonLabel,
-  useAdminPushNotifications
-} from "@/features/notifications/useAdminPushNotifications";
+import { ConfirmDialog } from "@/features/ui/ConfirmDialog";
 import { getFirebaseClientFirestore } from "@/lib/firebase/client";
+import { AdminAccountMenu } from "./AdminAccountMenu";
+import { AdminSectionMetrics } from "./AdminSectionMetrics";
 import { subscribeOwnerEvents, type AdminEvent } from "./events/data";
 import {
   disablePlan,
@@ -31,7 +30,6 @@ export function AdminPlansScreen() {
 
 function AdminPlansDashboard() {
   const { signOut, user } = useAuth();
-  const pushNotifications = useAdminPushNotifications(user);
   const db = useMemo(() => getFirebaseClientFirestore(), []);
   const [plans, setPlans] = useState<AdminPlan[]>([]);
   const [events, setEvents] = useState<AdminEvent[]>([]);
@@ -40,6 +38,7 @@ function AdminPlansDashboard() {
   const [notice, setNotice] = useState("");
   const [copiedPlanId, setCopiedPlanId] = useState<string | null>(null);
   const [deletingPlanId, setDeletingPlanId] = useState<string | null>(null);
+  const [deleteTargetPlan, setDeleteTargetPlan] = useState<AdminPlan | null>(null);
   const copyFeedbackTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -104,6 +103,10 @@ function AdminPlansDashboard() {
       return counts;
     }, {});
   }, [events]);
+  const activeEventTotal = activePlans.reduce(
+    (total, plan) => total + (activeEventCounts[plan.id] ?? 0),
+    0
+  );
 
   async function handleCopyInviteUrl(plan: AdminPlan) {
     setError("");
@@ -130,23 +133,23 @@ function AdminPlansDashboard() {
     }, 3000);
   }
 
-  async function handleDisablePlan(plan: AdminPlan) {
+  function requestDisablePlan(plan: AdminPlan) {
     setError("");
     setNotice("");
+    setDeleteTargetPlan(plan);
+  }
 
-    const confirmed = window.confirm(
-      `プラン「${plan.name}」を削除します。招待URLからもアクセスできなくなります。よろしいですか？`
-    );
-
-    if (!confirmed || !db) {
+  async function handleDisablePlan() {
+    if (!deleteTargetPlan || !db) {
       return;
     }
 
-    setDeletingPlanId(plan.id);
+    setDeletingPlanId(deleteTargetPlan.id);
 
     try {
-      await disablePlan(db, plan.id);
+      await disablePlan(db, deleteTargetPlan.id);
       setNotice("プランを削除しました。");
+      setDeleteTargetPlan(null);
     } catch {
       setError("プランの削除に失敗しました。");
     } finally {
@@ -157,54 +160,49 @@ function AdminPlansDashboard() {
   return (
     <main className="app-shell">
       <header className="top-bar">
-        <div>
-          <p className="eyebrow">RSVP Hub</p>
-          <h1>プラン一覧</h1>
-          <p className="muted-text">{user?.email}</p>
+        <div className="page-heading">
+          <div className="title-row">
+            <Link
+              aria-label="プラン一覧へ移動"
+              className="header-mark brand-mark"
+              data-tooltip="プラン一覧へ移動"
+              href="/admin/plans"
+            >
+              <span>RSVP</span>
+              <span>HUB</span>
+            </Link>
+            <h1>プラン一覧</h1>
+          </div>
         </div>
-        <div className="header-actions">
-          <button
-            className="secondary-button"
-            disabled={
-              pushNotifications.status === "requesting" ||
-              pushNotifications.status === "enabled" ||
-              pushNotifications.status === "unsupported" ||
-              pushNotifications.status === "missing-key"
-            }
-            onClick={() => pushNotifications.enableNotifications()}
-            title={pushNotifications.message || undefined}
-            type="button"
-          >
-            {getNotificationButtonLabel(pushNotifications.status)}
-          </button>
-          <button className="secondary-button" onClick={signOut} type="button">
-            ログアウト
-          </button>
-        </div>
+        <AdminAccountMenu user={user} onSignOut={signOut} />
       </header>
 
-      <section className="summary-grid" aria-label="プランサマリー">
-        <SummaryCard label="プラン数" value={`${activePlans.length} / ${maxActivePlans}`} />
-        <SummaryCard
-          label="イベント数"
-          value={String(
-            activePlans.reduce((total, plan) => total + (activeEventCounts[plan.id] ?? 0), 0)
-          )}
-        />
-      </section>
-
-      <section className="panel" aria-labelledby="plans-heading">
+      <section className="panel" aria-label="プラン一覧">
         <div className="section-heading">
           <div>
             <p className="eyebrow">Plans</p>
-            <h2 id="plans-heading">プラン一覧</h2>
+            <AdminSectionMetrics
+              metrics={[
+                { label: "プラン数", value: activePlans.length },
+                { label: "イベント数", value: activeEventTotal }
+              ]}
+            />
           </div>
           {canCreatePlan ? (
-            <Link className="primary-button button-link" href="/admin/plans/new">
+            <Link
+              className="primary-button button-link"
+              data-tooltip="新しいプランを作成"
+              href="/admin/plans/new"
+            >
               プラン追加
             </Link>
           ) : (
-            <button className="primary-button" disabled type="button">
+            <button
+              className="primary-button"
+              data-tooltip="プランは最大3件まで作成できます"
+              disabled
+              type="button"
+            >
               プラン追加
             </button>
           )}
@@ -220,11 +218,17 @@ function AdminPlansDashboard() {
         {error ? <p className="error-message top-message">{error}</p> : null}
 
         {isLoading ? (
-          <p className="empty-state">プラン一覧を読み込んでいます。</p>
+          <p className="loading-inline" role="status" aria-live="polite">
+            読み込み中...
+          </p>
         ) : activePlans.length === 0 ? (
           <div className="empty-state">
             <p>まだプランがありません。</p>
-            <Link className="primary-button button-link" href="/admin/plans/new">
+            <Link
+              className="primary-button button-link"
+              data-tooltip="最初のプランを作成"
+              href="/admin/plans/new"
+            >
               最初のプランを追加
             </Link>
           </div>
@@ -239,7 +243,7 @@ function AdminPlansDashboard() {
                   <th>アクセスコード</th>
                   <th>配信用URL</th>
                   <th>作成日時</th>
-                  <th>操作</th>
+                  <th className="action-column three-actions">操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -253,6 +257,7 @@ function AdminPlansDashboard() {
                       <div className="copy-feedback-wrap">
                         <button
                           className="secondary-button compact-button"
+                          data-tooltip="招待者へ送る共有URLをコピー"
                           onClick={() => handleCopyInviteUrl(plan)}
                           type="button"
                         >
@@ -266,24 +271,27 @@ function AdminPlansDashboard() {
                       </div>
                     </td>
                     <td>{formatDateTime(plan.createdAt)}</td>
-                    <td>
+                    <td className="action-column three-actions">
                       <div className="row-actions">
                         <Link
                           className="secondary-button compact-button button-link"
+                          data-tooltip="このプランのイベント一覧を表示"
                           href={`/admin/plans/${plan.id}`}
                         >
                           イベント
                         </Link>
                         <Link
                           className="secondary-button compact-button button-link"
+                          data-tooltip="プラン名・年月・アクセスコードを編集"
                           href={`/admin/plans/${plan.id}/edit`}
                         >
                           編集
                         </Link>
                         <button
                           className="danger-button compact-button"
+                          data-tooltip="このプランを削除"
                           disabled={deletingPlanId === plan.id}
-                          onClick={() => handleDisablePlan(plan)}
+                          onClick={() => requestDisablePlan(plan)}
                           type="button"
                         >
                           {deletingPlanId === plan.id ? "処理中" : "削除"}
@@ -297,16 +305,19 @@ function AdminPlansDashboard() {
           </div>
         )}
       </section>
-    </main>
-  );
-}
 
-function SummaryCard({ label, value }: { label: string; value: string }) {
-  return (
-    <article className="summary-card">
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </article>
+      {deleteTargetPlan ? (
+        <ConfirmDialog
+          confirmLabel="削除する"
+          isProcessing={deletingPlanId === deleteTargetPlan.id}
+          message={`プラン「${deleteTargetPlan.name}」を削除します。招待URLからもアクセスできなくなります。`}
+          onCancel={() => setDeleteTargetPlan(null)}
+          onConfirm={handleDisablePlan}
+          title="プラン削除の確認"
+          variant="danger"
+        />
+      ) : null}
+    </main>
   );
 }
 
