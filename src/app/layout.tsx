@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import { AuthProvider } from "@/features/auth/AuthProvider";
+import { ServiceWorkerRegistration } from "@/features/pwa/ServiceWorkerRegistration";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "RSVP Hub",
   description: "イベント参加者調整App",
+  manifest: "/manifest.webmanifest",
   icons: {
     icon: [
       {
@@ -12,7 +14,8 @@ export const metadata: Metadata = {
         type: "image/svg+xml"
       }
     ],
-    shortcut: "/icons/rsvp-hub-icon.svg"
+    shortcut: "/icons/rsvp-hub-icon.svg",
+    apple: "/icons/rsvp-hub-icon-192.png"
   }
 };
 
@@ -24,7 +27,10 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <body>
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <ServiceWorkerRegistration />
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

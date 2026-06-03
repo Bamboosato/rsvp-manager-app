@@ -250,8 +250,11 @@ MVPでは、アプリ管理者がFirebase ConsoleでAuthユーザーを作成す
 | fcmToken | string | yes | FCM token |
 | userAgent | string | no | 端末識別補助 |
 | isActive | boolean | yes | 有効状態 |
+| lastSeenAt | timestamp | yes | 最終登録確認日時 |
 | createdAt | timestamp | yes | 作成日時 |
 | updatedAt | timestamp | yes | 更新日時 |
+
+`tokenId` はFCM tokenをSHA-256でハッシュ化した値とし、token本文をドキュメントIDに直接使わない。送信時に無効tokenが検出された場合は `isActive=false` に更新する。
 
 ### 7.7 auditLogs
 
@@ -436,8 +439,8 @@ MVPでは再有効化は必須ではない。
 
 ### 13.1 token登録
 
-- イベント管理者の初回ログイン直後にアプリ内通知有効化案内を出す。
-- 「通知を有効にする」押下後にブラウザ通知許可を要求する。
+- イベント管理者の初回ログイン直後にブラウザ通知許可を自動要求する。
+- ブラウザ側で自動要求が抑制された場合、または後から許可したい場合は、プラン一覧の「通知を有効にする」から再試行できる。
 - 許可された場合、FCM tokenを取得し `notificationTokens` に保存する。
 - 同一イベント管理者が複数端末で許可した場合、複数tokenを保持する。
 - 送信失敗したtokenは `isActive = false` に更新する。
@@ -447,6 +450,19 @@ MVPでは再有効化は必須ではない。
 - 招待者が回答を追加または更新した場合に送信する。
 - イベント管理者による代理追加、修正、PINリセットでは送信しない。
 - 通知失敗は回答保存を失敗にしない。
+
+### 13.3 通知クリック
+
+- 通知データに対象プランのURL `/admin/plans/{planId}` を含める。
+- Service Worker の `notificationclick` で既存タブを対象URLへ遷移、既存タブがない場合は新規ウィンドウで開く。
+- 未ログインの場合は `ProtectedRoute` によりログイン画面を経由する。
+
+### 13.4 PWA
+
+- `src/app/manifest.ts` でPWA manifestを提供する。
+- `public/sw.js` でService Workerを提供する。
+- Service WorkerはアイコンとNext静的アセットをcache-first、画面遷移をnetwork-firstで扱う。
+- PWA用アイコンはSVGに加え、192px、512pxのPNGを提供する。
 
 ## 14. 非機能設計
 
@@ -487,7 +503,7 @@ MVPでは再有効化は必須ではない。
 - PINを数値として扱わず、常に4桁文字列として扱う。
 - `○`、`△`、`×` はUI表示値と保存値を分離する。
 - 物理削除は実装しない。
-- 通知許可はユーザー操作後に要求する。
+- 通知許可は初回ログイン直後に自動要求し、失敗時や後からの許可は管理画面のボタンで再試行できるようにする。
 
 ## 16. テスト設計観点
 

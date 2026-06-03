@@ -4,6 +4,10 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
+import {
+  getNotificationButtonLabel,
+  useAdminPushNotifications
+} from "@/features/notifications/useAdminPushNotifications";
 import { getFirebaseClientFirestore } from "@/lib/firebase/client";
 import { subscribeOwnerEvents, type AdminEvent } from "./events/data";
 import {
@@ -27,6 +31,7 @@ export function AdminPlansScreen() {
 
 function AdminPlansDashboard() {
   const { signOut, user } = useAuth();
+  const pushNotifications = useAdminPushNotifications(user);
   const db = useMemo(() => getFirebaseClientFirestore(), []);
   const [plans, setPlans] = useState<AdminPlan[]>([]);
   const [events, setEvents] = useState<AdminEvent[]>([]);
@@ -158,8 +163,19 @@ function AdminPlansDashboard() {
           <p className="muted-text">{user?.email}</p>
         </div>
         <div className="header-actions">
-          <button className="secondary-button" type="button">
-            通知を有効にする
+          <button
+            className="secondary-button"
+            disabled={
+              pushNotifications.status === "requesting" ||
+              pushNotifications.status === "enabled" ||
+              pushNotifications.status === "unsupported" ||
+              pushNotifications.status === "missing-key"
+            }
+            onClick={() => pushNotifications.enableNotifications()}
+            title={pushNotifications.message || undefined}
+            type="button"
+          >
+            {getNotificationButtonLabel(pushNotifications.status)}
           </button>
           <button className="secondary-button" onClick={signOut} type="button">
             ログアウト

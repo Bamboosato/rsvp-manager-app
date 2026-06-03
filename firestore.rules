@@ -170,8 +170,23 @@ service cloud.firestore {
         && request.resource.data.createdAt is timestamp;
     }
 
-    function validOwnedIncomingDocument() {
-      return ownsIncoming()
+    function validNotificationTokenData() {
+      return request.resource.data.keys().hasOnly([
+          'tokenId',
+          'ownerUid',
+          'fcmToken',
+          'userAgent',
+          'isActive',
+          'lastSeenAt',
+          'createdAt',
+          'updatedAt'
+        ])
+        && validString(request.resource.data.tokenId, 80)
+        && request.resource.data.ownerUid == request.auth.uid
+        && validString(request.resource.data.fcmToken, 4096)
+        && validNullableString(request.resource.data.userAgent, 300)
+        && request.resource.data.isActive is bool
+        && request.resource.data.lastSeenAt is timestamp
         && request.resource.data.createdAt is timestamp
         && request.resource.data.updatedAt is timestamp;
     }
@@ -255,11 +270,16 @@ service cloud.firestore {
 
     match /notificationTokens/{tokenId} {
       allow read: if ownsExisting();
-      allow create: if validOwnedIncomingDocument();
+      allow create: if ownsIncoming()
+        && request.resource.data.tokenId == tokenId
+        && validNotificationTokenData();
       allow update: if ownsExisting()
         && ownsIncoming()
+        && request.resource.data.tokenId == resource.data.tokenId
         && request.resource.data.ownerUid == resource.data.ownerUid
-        && request.resource.data.createdAt == resource.data.createdAt;
+        && request.resource.data.fcmToken == resource.data.fcmToken
+        && request.resource.data.createdAt == resource.data.createdAt
+        && validNotificationTokenData();
       allow delete: if false;
     }
 
