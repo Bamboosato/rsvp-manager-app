@@ -23,6 +23,20 @@ type PublicPlan = {
   hasPassword: boolean;
 };
 
+type CachedInviteCredential = {
+  accessCode?: string;
+  nickname?: string;
+  pin?: string;
+  planName?: string;
+  yearMonth?: string;
+  updatedAt: number;
+};
+
+type CachedInviteCredentialStore = {
+  byToken: Record<string, CachedInviteCredential>;
+  byPlan: Record<string, CachedInviteCredential>;
+};
+
 type InviteEvent = {
   id: string;
   eventDate: string;
@@ -53,6 +67,10 @@ type AnswerState = Record<
   }
 >;
 
+const inviteCredentialStorageKey = "rsvp-hub:invite-credentials:v1";
+const inviteCredentialMaxAgeMs = 1000 * 60 * 60 * 24 * 180;
+const inviteCredentialMaxEntries = 20;
+
 export function InviteStartScreen({ publicToken }: { publicToken: string }) {
   const router = useRouter();
   const [plan, setPlan] = useState<PublicPlan | null>(null);
@@ -64,7 +82,17 @@ export function InviteStartScreen({ publicToken }: { publicToken: string }) {
   useEffect(() => {
     loadPublicPlan({
       publicToken,
-      onPlan: setPlan,
+      onPlan: (nextPlan) => {
+        setPlan(nextPlan);
+
+        if (nextPlan?.hasPassword) {
+          const cachedCredential = readCachedInviteCredential(publicToken, nextPlan);
+
+          if (cachedCredential?.accessCode) {
+            setAccessCode((currentAccessCode) => currentAccessCode || cachedCredential.accessCode || "");
+          }
+        }
+      },
       onError: setError,
       onFinally: () => setIsLoading(false)
     });
@@ -94,6 +122,13 @@ export function InviteStartScreen({ publicToken }: { publicToken: string }) {
         return;
       }
 
+      saveCachedInviteCredential({
+        publicToken,
+        plan,
+        credential: {
+          accessCode: accessCode.trim()
+        }
+      });
       router.push(`/invite/${publicToken}/entry`);
     } catch {
       setError("通信に失敗しました。時間をおいて再度お試しください。");
@@ -176,7 +211,21 @@ export function InviteEntryScreen({ publicToken }: { publicToken: string }) {
   useEffect(() => {
     loadPublicPlan({
       publicToken,
-      onPlan: setPlan,
+      onPlan: (nextPlan) => {
+        setPlan(nextPlan);
+
+        if (nextPlan) {
+          const cachedCredential = readCachedInviteCredential(publicToken, nextPlan);
+
+          if (cachedCredential?.nickname) {
+            setNickname((currentNickname) => currentNickname || cachedCredential.nickname || "");
+          }
+
+          if (cachedCredential?.pin) {
+            setPin((currentPin) => currentPin || cachedCredential.pin || "");
+          }
+        }
+      },
       onError: setError,
       onFinally: () => setIsLoading(false)
     });
@@ -188,6 +237,14 @@ export function InviteEntryScreen({ publicToken }: { publicToken: string }) {
     setIsSubmitting(true);
 
     try {
+      if (plan?.hasPassword) {
+        const cachedCredential = readCachedInviteCredential(publicToken, plan);
+
+        if (cachedCredential?.accessCode) {
+          await verifyInviteAccessCode(publicToken, cachedCredential.accessCode);
+        }
+      }
+
       const response = await fetch(`/api/invite/${publicToken}/entry`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -200,6 +257,14 @@ export function InviteEntryScreen({ publicToken }: { publicToken: string }) {
         return;
       }
 
+      saveCachedInviteCredential({
+        publicToken,
+        plan,
+        credential: {
+          nickname: nickname.trim(),
+          pin: pin.trim()
+        }
+      });
       router.push(`/invite/${publicToken}/responses`);
     } catch {
       setError("通信に失敗しました。時間をおいて再度お試しください。");
@@ -689,6 +754,174 @@ async function loadPublicPlan({
   } finally {
     onFinally();
   }
+}
+
+async function verifyInviteAccessCode(publicToken: string, accessCode: string) {
+  const response = await fetch(`/api/invite/${publicToken}/password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ accessCode })
+  });
+
+  return response.ok;
+}
+
+function readCachedInviteCredential(publicToken: string, plan: PublicPlan) {
+  const store = readCachedInviteCredentialStore();
+  const tokenCredential = store.byToken[publicToken];
+
+  if (isFreshCachedInviteCredential(tokenCredential)) {
+    return tokenCredential;
+  }
+
+  const planCredential = store.byPlan[buildPlanCredentialKey(plan)];
+
+  if (isFreshCachedInviteCredential(planCredential)) {
+    return planCredential;
+  }
+
+  return null;
+}
+
+function saveCachedInviteCredential({
+  publicToken,
+  plan,
+  credential
+}: {
+  publicToken: string;
+  plan: PublicPlan | null;
+  credential: Partial<Pick<CachedInviteCredential, "accessCode" | "nickname" | "pin">>;
+}) {
+  const store = readCachedInviteCredentialStore();
+  const existingCredential =
+    store.byToken[publicToken] ??
+    (plan ? store.byPlan[buildPlanCredentialKey(plan)] : undefined) ??
+    {};
+  const nextCredential: CachedInviteCredential = {
+    ...existingCredential,
+    ...credential,
+    planName: plan?.name ?? existingCredential.planName,
+    yearMonth: plan?.yearMonth ?? existingCredential.yearMonth,
+    updatedAt: Date.now()
+  };
+
+  store.byToken[publicToken] = nextCredential;
+
+  if (plan) {
+    store.byPlan[buildPlanCredentialKey(plan)] = nextCredential;
+  }
+
+  writeCachedInviteCredentialStore(store);
+}
+
+function readCachedInviteCredentialStore(): CachedInviteCredentialStore {
+  if (typeof window === "undefined") {
+    return createEmptyCachedInviteCredentialStore();
+  }
+
+  try {
+    const rawStore = window.localStorage.getItem(inviteCredentialStorageKey);
+
+    if (!rawStore) {
+      return createEmptyCachedInviteCredentialStore();
+    }
+
+    const parsedStore = JSON.parse(rawStore) as unknown;
+
+    if (!isObjectRecord(parsedStore)) {
+      return createEmptyCachedInviteCredentialStore();
+    }
+
+    return {
+      byToken: readCachedInviteCredentialMap(parsedStore.byToken),
+      byPlan: readCachedInviteCredentialMap(parsedStore.byPlan)
+    };
+  } catch {
+    return createEmptyCachedInviteCredentialStore();
+  }
+}
+
+function writeCachedInviteCredentialStore(store: CachedInviteCredentialStore) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(
+      inviteCredentialStorageKey,
+      JSON.stringify({
+        byToken: pruneCachedInviteCredentialMap(store.byToken),
+        byPlan: pruneCachedInviteCredentialMap(store.byPlan)
+      })
+    );
+  } catch {
+    // Ignore storage failures so invite entry still works in private or restricted browsers.
+  }
+}
+
+function readCachedInviteCredentialMap(value: unknown) {
+  if (!isObjectRecord(value)) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).flatMap(([key, credential]) => {
+      const normalizedCredential = normalizeCachedInviteCredential(credential);
+
+      return normalizedCredential ? [[key, normalizedCredential]] : [];
+    })
+  );
+}
+
+function normalizeCachedInviteCredential(value: unknown): CachedInviteCredential | null {
+  if (!isObjectRecord(value) || typeof value.updatedAt !== "number") {
+    return null;
+  }
+
+  return {
+    accessCode: typeof value.accessCode === "string" ? value.accessCode : undefined,
+    nickname: typeof value.nickname === "string" ? value.nickname : undefined,
+    pin: typeof value.pin === "string" ? value.pin : undefined,
+    planName: typeof value.planName === "string" ? value.planName : undefined,
+    yearMonth: typeof value.yearMonth === "string" ? value.yearMonth : undefined,
+    updatedAt: value.updatedAt
+  };
+}
+
+function pruneCachedInviteCredentialMap(
+  map: Record<string, CachedInviteCredential>
+): Record<string, CachedInviteCredential> {
+  return Object.fromEntries(
+    Object.entries(map)
+      .filter(([, credential]) => isFreshCachedInviteCredential(credential))
+      .sort(([, first], [, second]) => second.updatedAt - first.updatedAt)
+      .slice(0, inviteCredentialMaxEntries)
+  );
+}
+
+function isFreshCachedInviteCredential(
+  credential: CachedInviteCredential | undefined
+): credential is CachedInviteCredential {
+  return Boolean(
+    credential &&
+      Number.isFinite(credential.updatedAt) &&
+      Date.now() - credential.updatedAt <= inviteCredentialMaxAgeMs
+  );
+}
+
+function buildPlanCredentialKey(plan: PublicPlan) {
+  return `${plan.name}\u001f${plan.yearMonth}`;
+}
+
+function createEmptyCachedInviteCredentialStore(): CachedInviteCredentialStore {
+  return {
+    byToken: {},
+    byPlan: {}
+  };
+}
+
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }
 
 function formatYearMonth(yearMonth: string) {

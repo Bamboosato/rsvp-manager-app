@@ -1,6 +1,7 @@
-const CACHE_VERSION = "rsvp-hub-v2";
+const CACHE_VERSION = "rsvp-hub-v3";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const NAVIGATION_CACHE = `${CACHE_VERSION}-navigation`;
+const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "::1"]);
 const STATIC_ASSETS = [
   "/",
   "/login",
@@ -10,6 +11,11 @@ const STATIC_ASSETS = [
 ];
 
 self.addEventListener("install", (event) => {
+  if (isLocalDevelopmentHost()) {
+    event.waitUntil(self.skipWaiting());
+    return;
+  }
+
   event.waitUntil(
     caches
       .open(STATIC_CACHE)
@@ -43,6 +49,10 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
 
   if (url.origin !== self.location.origin) {
+    return;
+  }
+
+  if (isLocalDevelopmentHost()) {
     return;
   }
 
@@ -135,6 +145,10 @@ async function networkFirstNavigation(request) {
       })
     );
   }
+}
+
+function isLocalDevelopmentHost() {
+  return LOCAL_HOSTNAMES.has(self.location.hostname);
 }
 
 function readPushPayload(event) {
