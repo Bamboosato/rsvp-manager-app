@@ -20,6 +20,15 @@ const nextConfig: NextConfig = {
             value: "no-cache"
           }
         ]
+      },
+      {
+        source: "/manifest.webmanifest",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "no-cache"
+          }
+        ]
       }
     ];
   }

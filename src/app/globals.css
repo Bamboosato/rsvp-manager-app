@@ -457,6 +457,7 @@ h3 {
 .field {
   display: grid;
   gap: 7px;
+  min-width: 0;
   color: var(--text);
   font-size: 0.9rem;
   font-weight: 700;
@@ -466,7 +467,9 @@ h3 {
 .field textarea,
 .field select {
   min-height: 42px;
+  min-width: 0;
   width: 100%;
+  max-width: 100%;
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 0 12px;

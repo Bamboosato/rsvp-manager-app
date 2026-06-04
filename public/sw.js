@@ -1,4 +1,4 @@
-const CACHE_VERSION = "rsvp-hub-v1";
+const CACHE_VERSION = "rsvp-hub-v2";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const NAVIGATION_CACHE = `${CACHE_VERSION}-navigation`;
 const STATIC_ASSETS = [
@@ -110,7 +110,7 @@ async function cacheFirst(request) {
 
 async function networkFirstNavigation(request) {
   try {
-    const response = await fetch(request);
+    const response = await fetch(request, { cache: "no-store" });
 
     if (response.ok) {
       const cache = await caches.open(NAVIGATION_CACHE);
