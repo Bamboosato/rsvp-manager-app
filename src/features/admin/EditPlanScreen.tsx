@@ -136,7 +136,7 @@ function EditPlanForm({ planId }: { planId: string }) {
           <p className="eyebrow">Not Found</p>
           <h1>プランを表示できません</h1>
           <p className="muted-text">
-            プランが存在しないか、ログイン中のイベント管理者では閲覧できません。
+            プランが存在しないか、ログイン中の幹事さんでは閲覧できません。
           </p>
           <Link
             className="secondary-button button-link top-message"

@@ -1,11 +1,14 @@
 "use client";
 
 import type { User } from "firebase/auth";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
   getNotificationButtonLabel,
   useAdminPushNotifications
 } from "@/features/notifications/useAdminPushNotifications";
+import { LOGOUT_REDIRECT_STORAGE_KEY } from "@/features/auth/logoutRedirect";
 
 type AdminAccountMenuProps = {
   user: User | null;
@@ -13,6 +16,7 @@ type AdminAccountMenuProps = {
 };
 
 export function AdminAccountMenu({ user, onSignOut }: AdminAccountMenuProps) {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const pushNotifications = useAdminPushNotifications(user);
@@ -54,7 +58,9 @@ export function AdminAccountMenu({ user, onSignOut }: AdminAccountMenuProps) {
 
   async function handleSignOut() {
     setIsOpen(false);
+    window.sessionStorage.setItem(LOGOUT_REDIRECT_STORAGE_KEY, "1");
     await onSignOut();
+    router.replace("/");
   }
 
   return (
@@ -120,6 +126,15 @@ export function AdminAccountMenu({ user, onSignOut }: AdminAccountMenuProps) {
               </div>
             </div>
           </div>
+
+          <Link
+            className="secondary-button button-link account-help-link"
+            data-tooltip="ヘルプ/操作説明を開く"
+            href="/help"
+            onClick={() => setIsOpen(false)}
+          >
+            ヘルプ/操作説明
+          </Link>
 
           <button
             className="secondary-button account-logout-button"

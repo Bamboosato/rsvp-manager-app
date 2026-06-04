@@ -373,7 +373,7 @@ function EventDetail({ eventId }: { eventId: string }) {
           </div>
           <button
             className="primary-button"
-            data-tooltip="管理者が招待者の回答を追加"
+            data-tooltip="幹事さんが招待者の回答を追加"
             disabled={isSubmitting}
             onClick={() => {
               setError("");

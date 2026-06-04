@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { AuthProvider } from "@/features/auth/AuthProvider";
+import { LegalFooter } from "@/features/legal/LegalFooter";
 import { ServiceWorkerRegistration } from "@/features/pwa/ServiceWorkerRegistration";
 import { GlobalTooltip } from "@/features/ui/GlobalTooltip";
 import "./globals.css";
@@ -32,7 +33,7 @@ export default function RootLayout({
           <ServiceWorkerRegistration />
           {children}
           <GlobalTooltip />
-          <footer className="app-footer">© 2026 Bamboosatov1.0.0</footer>
+          <LegalFooter />
         </AuthProvider>
       </body>
     </html>

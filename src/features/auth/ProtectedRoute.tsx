@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useEffect } from "react";
 import { useAuth } from "./AuthProvider";
+import { LOGOUT_REDIRECT_STORAGE_KEY } from "./logoutRedirect";
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -11,6 +12,15 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (isConfigured && !isLoading && !user) {
+      const shouldRedirectHome =
+        window.sessionStorage.getItem(LOGOUT_REDIRECT_STORAGE_KEY) === "1";
+
+      if (shouldRedirectHome) {
+        window.sessionStorage.removeItem(LOGOUT_REDIRECT_STORAGE_KEY);
+        router.replace("/");
+        return;
+      }
+
       router.replace(`/login?next=${encodeURIComponent(pathname)}`);
     }
   }, [isConfigured, isLoading, pathname, router, user]);
@@ -22,7 +32,7 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
           <p className="eyebrow">Configuration</p>
           <h1>Firebase設定が必要です</h1>
           <p className="muted-text">
-            `.env.local` にFirebase Web Appの設定値を登録すると、イベント管理者ログインを利用できます。
+            `.env.local` にFirebase Web Appの設定値を登録すると、幹事さんログインを利用できます。
           </p>
         </section>
       </main>

@@ -51,7 +51,7 @@ function AdminPlansDashboard() {
       email: user.email,
       displayName: user.displayName
     }).catch(() => {
-      setError("イベント管理者情報の初期化に失敗しました。");
+      setError("幹事さん情報の初期化に失敗しました。");
     });
 
     return subscribeOwnerPlans({
