@@ -466,6 +466,7 @@ h3 {
 .field input,
 .field textarea,
 .field select {
+  display: block;
   min-height: 42px;
   min-width: 0;
   width: 100%;
@@ -475,6 +476,14 @@ h3 {
   padding: 0 12px;
   color: var(--text);
   background: var(--surface);
+}
+
+.field input[type="date"] {
+  min-inline-size: 0;
+  inline-size: 100%;
+  max-inline-size: 100%;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .field textarea {
