@@ -467,6 +467,7 @@ h3 {
 }
 
 .auth-panel {
+  position: relative;
   width: min(100%, 440px);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -480,8 +481,10 @@ h3 {
   line-height: 1.7;
 }
 
-.auth-back-button {
-  margin-bottom: 16px;
+.auth-close-button {
+  position: absolute;
+  top: 16px;
+  right: 16px;
 }
 
 .public-page {
@@ -758,7 +761,8 @@ h3 {
   padding: 0 16px;
 }
 
-.field input[type="date"] {
+.field input[type="date"],
+.field input[type="month"] {
   min-inline-size: 0;
   inline-size: 100%;
   max-inline-size: 100%;
@@ -767,7 +771,8 @@ h3 {
   appearance: none;
 }
 
-.field input[type="date"]::-webkit-date-and-time-value {
+.field input[type="date"]::-webkit-date-and-time-value,
+.field input[type="month"]::-webkit-date-and-time-value {
   display: flex;
   align-items: center;
   min-height: 100%;

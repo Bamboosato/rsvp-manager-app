@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 
-export function LoginBackButton() {
+export function LoginCloseButton() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const requestedReturnTo = searchParams.get("returnTo");
@@ -15,12 +15,13 @@ export function LoginBackButton() {
 
   return (
     <button
-      className="secondary-button auth-back-button"
-      data-tooltip="前の画面へ戻る"
+      aria-label="ログイン画面を閉じる"
+      className="account-close-button auth-close-button"
+      data-tooltip="ログイン画面を閉じる"
       onClick={() => router.replace(returnTo)}
       type="button"
     >
-      ← 戻る
+      ×
     </button>
   );
 }
