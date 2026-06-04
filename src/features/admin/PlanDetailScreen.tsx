@@ -142,7 +142,7 @@ function PlanDetail({ planId }: { planId: string }) {
     }
 
     try {
-      await navigator.clipboard.writeText(`${window.location.origin}/invite/${plan.publicToken}`);
+      await copyInviteLinkToClipboard(plan);
       showCopyFeedback();
     } catch {
       setError("URLコピーに失敗しました。ブラウザの設定を確認してください。");
@@ -307,15 +307,35 @@ function PlanDetail({ planId }: { planId: string }) {
           </div>
         </dl>
         <div className="row-actions">
+          {plan.isActive ? (
+            <Link
+              className="secondary-button button-link"
+              data-tooltip="出欠回答ページを別タブで開く"
+              href={`/invite/${plan.publicToken}`}
+              rel="noreferrer"
+              target="_blank"
+            >
+              URLを開く
+            </Link>
+          ) : (
+            <button
+              className="secondary-button"
+              data-tooltip="無効なプランのURLは開けません"
+              disabled
+              type="button"
+            >
+              URLを開く
+            </button>
+          )}
           <div className="copy-feedback-wrap">
             <button
               className="secondary-button"
-              data-tooltip="招待者へ送る共有URLをコピー"
+              data-tooltip="招待者へ送るプラン名とURLをコピー"
               disabled={!plan.isActive}
               onClick={handleCopyInviteUrl}
               type="button"
             >
-              配信用URLコピー
+              URLコピー
             </button>
             {isInviteUrlCopied ? (
               <span className="copy-feedback" role="status">
@@ -536,6 +556,43 @@ function AttendanceBadges({
 
 function getEventTitle(event: AdminEvent) {
   return event.name || "イベント名未設定";
+}
+
+async function copyInviteLinkToClipboard(plan: AdminPlan) {
+  const inviteUrl = `${window.location.origin}/invite/${plan.publicToken}`;
+  const plainText = `${plan.name}\n${inviteUrl}`;
+
+  if (typeof ClipboardItem !== "undefined" && typeof navigator.clipboard.write === "function") {
+    const htmlText = `<a href="${escapeHtml(inviteUrl)}">${escapeHtml(plan.name)}</a>`;
+
+    try {
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          "text/html": new Blob([htmlText], { type: "text/html" }),
+          "text/plain": new Blob([plainText], { type: "text/plain" })
+        })
+      ]);
+      return;
+    } catch {
+      // Fall back to plain text for browsers or paste targets that reject rich clipboard data.
+    }
+  }
+
+  await navigator.clipboard.writeText(plainText);
+}
+
+function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/g, (character) => {
+    const entities: Record<string, string> = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;"
+    };
+
+    return entities[character] ?? character;
+  });
 }
 
 function buildStatusChangeMessage(event: AdminEvent, nextStatus: EventStatus) {

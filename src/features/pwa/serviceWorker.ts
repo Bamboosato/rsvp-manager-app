@@ -13,6 +13,10 @@ export function registerServiceWorker() {
     return Promise.resolve(null);
   }
 
+  if (process.env.NODE_ENV !== "production") {
+    return unregisterServiceWorkersForDevelopment();
+  }
+
   if (!registrationPromise) {
     registrationPromise = navigator.serviceWorker
       .register(serviceWorkerPath, {
@@ -31,6 +35,24 @@ export function registerServiceWorker() {
   }
 
   return registrationPromise;
+}
+
+async function unregisterServiceWorkersForDevelopment() {
+  try {
+    const registrations = await navigator.serviceWorker.getRegistrations();
+
+    await Promise.all(registrations.map((registration) => registration.unregister()));
+
+    if ("caches" in window) {
+      const cacheNames = await window.caches.keys();
+
+      await Promise.all(cacheNames.map((cacheName) => window.caches.delete(cacheName)));
+    }
+  } catch (error) {
+    console.error("Failed to unregister development service workers.", error);
+  }
+
+  return null;
 }
 
 export function requestServiceWorkerUpdate(registration: ServiceWorkerRegistration) {
