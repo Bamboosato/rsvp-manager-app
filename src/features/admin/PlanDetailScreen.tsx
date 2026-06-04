@@ -307,26 +307,6 @@ function PlanDetail({ planId }: { planId: string }) {
           </div>
         </dl>
         <div className="row-actions">
-          {plan.isActive ? (
-            <Link
-              className="secondary-button button-link"
-              data-tooltip="出欠回答ページを別タブで開く"
-              href={`/invite/${plan.publicToken}`}
-              rel="noreferrer"
-              target="_blank"
-            >
-              URLを開く
-            </Link>
-          ) : (
-            <button
-              className="secondary-button"
-              data-tooltip="無効なプランのURLは開けません"
-              disabled
-              type="button"
-            >
-              URLを開く
-            </button>
-          )}
           <div className="copy-feedback-wrap">
             <button
               className="secondary-button"
