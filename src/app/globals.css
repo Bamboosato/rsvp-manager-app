@@ -43,6 +43,10 @@ main {
 }
 
 .app-footer {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
   flex-shrink: 0;
   border-top: 1px solid var(--border);
   padding: 14px 16px;
@@ -51,6 +55,29 @@ main {
   font-size: 0.78rem;
   font-weight: 700;
   text-align: center;
+}
+
+.footer-copy {
+  grid-column: 2;
+}
+
+.footer-links {
+  display: inline-flex;
+  grid-column: 3;
+  align-items: center;
+  justify-self: end;
+  gap: 8px;
+}
+
+.footer-links a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.footer-links a:hover,
+.footer-links a:focus-visible {
+  color: var(--accent);
+  text-decoration: underline;
 }
 
 button,
@@ -277,6 +304,10 @@ button {
   justify-self: start;
 }
 
+.account-help-link {
+  justify-self: start;
+}
+
 .eyebrow {
   margin: 0 0 6px;
   color: var(--muted);
@@ -447,6 +478,247 @@ h3 {
   margin-bottom: 22px;
   color: var(--muted);
   line-height: 1.7;
+}
+
+.auth-back-button {
+  margin-bottom: 16px;
+}
+
+.public-page {
+  padding-top: 76px;
+}
+
+.public-header {
+  position: fixed;
+  z-index: 40;
+  top: 0;
+  right: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 64px;
+  border-bottom: 1px solid var(--border);
+  padding: 10px max(16px, calc((100vw - 960px) / 2));
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.public-brand {
+  color: var(--text);
+  font-size: 1.05rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.public-brand:hover,
+.public-brand:focus-visible {
+  color: var(--accent);
+}
+
+.public-content {
+  display: grid;
+  gap: 30px;
+  width: min(960px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 28px 0 56px;
+}
+
+.admin-help-content {
+  padding-top: 0;
+}
+
+.public-section {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 30px;
+}
+
+.public-section:last-child {
+  border-bottom: 0;
+}
+
+.public-section-heading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.public-section-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.public-section-icon img {
+  width: 28px;
+  height: 28px;
+}
+
+.public-lead {
+  max-width: 760px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.85;
+}
+
+.public-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 22px;
+}
+
+.public-feature-grid > div {
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 14px;
+  background: var(--surface);
+}
+
+.public-feature-grid strong,
+.public-step-row h3,
+.help-guide-row h3 {
+  margin: 0;
+}
+
+.public-feature-grid span,
+.public-step-row p,
+.help-guide-row p,
+.public-help-link p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.public-step-list,
+.help-guide-list {
+  display: grid;
+  gap: 12px;
+}
+
+.public-step-row,
+.help-guide-row {
+  display: grid;
+  grid-template-columns: 86px minmax(0, 1fr);
+  gap: 16px;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+
+.public-step-row > span {
+  color: var(--accent);
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.public-help-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.public-note-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding-left: 20px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.legal-content {
+  display: grid;
+  gap: 22px;
+  width: min(900px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 28px 0 56px;
+}
+
+.legal-hero,
+.legal-section {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px;
+  background: var(--surface);
+}
+
+.legal-hero p {
+  max-width: 760px;
+  margin-bottom: 0;
+  color: var(--muted);
+  line-height: 1.8;
+}
+
+.legal-updated {
+  margin-top: 14px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.legal-section {
+  display: grid;
+  gap: 12px;
+}
+
+.legal-section p {
+  margin-bottom: 0;
+  color: var(--text);
+  line-height: 1.8;
+}
+
+.legal-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 1.2rem;
+  line-height: 1.8;
+}
+
+.legal-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  background: rgba(23, 32, 42, 0.42);
+}
+
+.legal-modal-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: min(100%, 920px);
+  height: min(90vh, 780px);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: 0 20px 56px rgba(23, 32, 42, 0.22);
+}
+
+.legal-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--border);
+  padding: 16px;
+}
+
+.legal-modal-frame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: var(--background);
 }
 
 .form-stack {
@@ -1202,10 +1474,66 @@ th {
     font-size: 1.45rem;
   }
 
+  .app-footer {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+
+  .footer-copy,
+  .footer-links {
+    grid-column: 1;
+    justify-self: center;
+  }
+
+  .legal-modal-backdrop {
+    padding: 10px;
+  }
+
+  .legal-modal-panel {
+    height: min(94vh, 780px);
+  }
+
+  .legal-modal-header {
+    padding: 12px;
+  }
+
   .panel,
   .guest-preview,
   .auth-panel {
     padding: 14px;
+  }
+
+  .public-page {
+    padding-top: 68px;
+  }
+
+  .public-header {
+    min-height: 60px;
+    padding: 10px;
+  }
+
+  .public-content {
+    width: min(100% - 20px, 520px);
+    padding-top: 20px;
+  }
+
+  .public-section-heading {
+    align-items: flex-start;
+  }
+
+  .public-feature-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .public-step-row,
+  .help-guide-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .public-help-link {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .info-panel {

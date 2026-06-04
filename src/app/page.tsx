@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import { PublicHomeScreen } from "@/features/public/PublicHomeScreen";
 
 export default function Home() {
-  redirect("/admin/plans");
+  return <PublicHomeScreen />;
 }

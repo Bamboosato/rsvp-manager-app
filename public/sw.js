@@ -1,10 +1,13 @@
-const CACHE_VERSION = "rsvp-hub-v3";
+const CACHE_VERSION = "rsvp-hub-v5";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const NAVIGATION_CACHE = `${CACHE_VERSION}-navigation`;
 const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "::1"]);
 const STATIC_ASSETS = [
   "/",
+  "/help",
   "/login",
+  "/terms",
+  "/privacy",
   "/icons/rsvp-hub-icon.svg",
   "/icons/rsvp-hub-icon-192.png",
   "/icons/rsvp-hub-icon-512.png"

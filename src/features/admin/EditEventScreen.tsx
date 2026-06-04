@@ -161,7 +161,7 @@ function EditEventForm({
           <p className="eyebrow">Not Found</p>
           <h1>イベントを表示できません</h1>
           <p className="muted-text">
-            イベントが存在しないか、ログイン中のイベント管理者では閲覧できません。
+            イベントが存在しないか、ログイン中の幹事さんでは閲覧できません。
           </p>
           <Link
             className="secondary-button button-link top-message"
