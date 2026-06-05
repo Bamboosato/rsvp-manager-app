@@ -1,4 +1,4 @@
-const CACHE_VERSION = "rsvp-hub-v5";
+const CACHE_VERSION = "rsvp-hub-v6";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const NAVIGATION_CACHE = `${CACHE_VERSION}-navigation`;
 const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "::1"]);
@@ -78,15 +78,18 @@ self.addEventListener("push", (event) => {
   }
 
   event.waitUntil(
-    self.registration.showNotification(notification.title, {
-      body: notification.body,
-      icon: "/icons/rsvp-hub-icon-192.png",
-      badge: "/icons/rsvp-hub-icon-192.png",
-      tag: notification.tag,
-      data: {
-        url: notification.url
-      }
-    })
+    Promise.all([
+      self.registration.showNotification(notification.title, {
+        body: notification.body,
+        icon: "/icons/rsvp-hub-icon-192.png",
+        badge: "/icons/rsvp-hub-icon-192.png",
+        tag: notification.tag,
+        data: {
+          url: notification.url
+        }
+      }),
+      setAppBadge(1)
+    ])
   );
 });
 
@@ -95,7 +98,7 @@ self.addEventListener("notificationclick", (event) => {
 
   const targetUrl = resolveNotificationUrl(event.notification.data?.url);
 
-  event.waitUntil(openOrFocusClient(targetUrl));
+  event.waitUntil(Promise.all([clearAppBadge(), openOrFocusClient(targetUrl)]));
 });
 
 self.addEventListener("message", (event) => {
@@ -147,6 +150,36 @@ async function networkFirstNavigation(request) {
         headers: { "Content-Type": "text/plain; charset=utf-8" }
       })
     );
+  }
+}
+
+async function setAppBadge(count) {
+  if (
+    !("setAppBadge" in self.registration) ||
+    typeof self.registration.setAppBadge !== "function"
+  ) {
+    return;
+  }
+
+  try {
+    await self.registration.setAppBadge(count);
+  } catch (error) {
+    console.error("Failed to set app badge.", error);
+  }
+}
+
+async function clearAppBadge() {
+  if (
+    !("clearAppBadge" in self.registration) ||
+    typeof self.registration.clearAppBadge !== "function"
+  ) {
+    return;
+  }
+
+  try {
+    await self.registration.clearAppBadge();
+  } catch (error) {
+    console.error("Failed to clear app badge.", error);
   }
 }
 
