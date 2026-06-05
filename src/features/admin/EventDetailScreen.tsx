@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
+import { ConfirmDialog } from "@/features/ui/ConfirmDialog";
 import { RequiredMark, RequiredNote } from "@/features/ui/RequiredMark";
 import { AdminAccountMenu } from "./AdminAccountMenu";
 import { AdminSectionMetrics } from "./AdminSectionMetrics";
@@ -79,7 +80,11 @@ function EventDetail({ eventId }: { eventId: string }) {
   const [isAddResponseOpen, setIsAddResponseOpen] = useState(false);
   const [editing, setEditing] = useState<EditingState>(null);
   const [pinReset, setPinReset] = useState<PinResetState>(null);
+  const [deleteTargetResponse, setDeleteTargetResponse] = useState<EventResponse | null>(null);
+  const [deletingResponseId, setDeletingResponseId] = useState<string | null>(null);
+  const [isAttendanceCopied, setIsAttendanceCopied] = useState(false);
   const isAddResponseSubmittingRef = useRef(false);
+  const attendanceCopyFeedbackTimerRef = useRef<number | null>(null);
 
   const loadDetail = useCallback(async () => {
     if (!user) {
@@ -120,6 +125,14 @@ function EventDetail({ eventId }: { eventId: string }) {
 
     return () => window.clearTimeout(timeoutId);
   }, [loadDetail]);
+
+  useEffect(() => {
+    return () => {
+      if (attendanceCopyFeedbackTimerRef.current) {
+        window.clearTimeout(attendanceCopyFeedbackTimerRef.current);
+      }
+    };
+  }, []);
 
   async function handleAddResponse(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -273,6 +286,73 @@ function EventDetail({ eventId }: { eventId: string }) {
     }
   }
 
+  async function handleDeleteResponse() {
+    if (!user || !deleteTargetResponse) {
+      return;
+    }
+
+    setDeletingResponseId(deleteTargetResponse.id);
+    setError("");
+    setNotice("");
+
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch(`/api/admin/responses/${deleteTargetResponse.id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${idToken}`
+        }
+      });
+      const result = (await response.json().catch(() => null)) as {
+        message?: string;
+      } | null;
+
+      if (!response.ok) {
+        setError(result?.message ?? "回答の削除に失敗しました。");
+        setDeleteTargetResponse(null);
+        return;
+      }
+
+      setDeleteTargetResponse(null);
+      setNotice("回答を削除しました。");
+      await loadDetail();
+    } catch {
+      setError("通信に失敗しました。時間をおいて再度お試しください。");
+      setDeleteTargetResponse(null);
+    } finally {
+      setDeletingResponseId(null);
+    }
+  }
+
+  async function handleCopyAttendance() {
+    if (!detail) {
+      return;
+    }
+
+    setError("");
+    setNotice("");
+
+    try {
+      await navigator.clipboard.writeText(buildAttendanceCopyText(detail));
+      showAttendanceCopyFeedback();
+    } catch {
+      setError("出欠コピーに失敗しました。ブラウザの設定を確認してください。");
+    }
+  }
+
+  function showAttendanceCopyFeedback() {
+    setIsAttendanceCopied(true);
+
+    if (attendanceCopyFeedbackTimerRef.current) {
+      window.clearTimeout(attendanceCopyFeedbackTimerRef.current);
+    }
+
+    attendanceCopyFeedbackTimerRef.current = window.setTimeout(() => {
+      setIsAttendanceCopied(false);
+      attendanceCopyFeedbackTimerRef.current = null;
+    }, 3000);
+  }
+
   if (isLoading) {
     return (
       <main className="app-shell">
@@ -307,14 +387,17 @@ function EventDetail({ eventId }: { eventId: string }) {
 
   return (
     <main className="app-shell">
-      <header className="top-bar">
+      <header className="top-bar sticky-top-bar">
         <div className="page-heading">
           <div className="title-row">
             <Link className="back-link" data-tooltip="イベント一覧へ戻る" href={planHref}>
               <span>←</span>
               <span>戻る</span>
             </Link>
-            <h1>{eventTitle}</h1>
+            <div className="title-stack">
+              <span className="title-label">イベント</span>
+              <h1>{eventTitle}</h1>
+            </div>
           </div>
         </div>
         <AdminAccountMenu user={user} onSignOut={signOut} />
@@ -373,19 +456,36 @@ function EventDetail({ eventId }: { eventId: string }) {
               ]}
             />
           </div>
-          <button
-            className="primary-button"
-            data-tooltip="幹事さんが招待者の回答を追加"
-            disabled={isSubmitting}
-            onClick={() => {
-              setError("");
-              setNotice("");
-              setIsAddResponseOpen(true);
-            }}
-            type="button"
-          >
-            代理回答
-          </button>
+          <div className="section-actions">
+            <span className="copy-feedback-wrap">
+              <button
+                className="secondary-button"
+                data-tooltip="出欠一覧をクリップボードへコピー"
+                onClick={handleCopyAttendance}
+                type="button"
+              >
+                出欠コピー
+              </button>
+              {isAttendanceCopied ? (
+                <span className="copy-feedback" role="status">
+                  コピーしました
+                </span>
+              ) : null}
+            </span>
+            <button
+              className="primary-button"
+              data-tooltip="幹事さんが招待者の回答を追加"
+              disabled={isSubmitting}
+              onClick={() => {
+                setError("");
+                setNotice("");
+                setIsAddResponseOpen(true);
+              }}
+              type="button"
+            >
+              代理回答
+            </button>
+          </div>
         </div>
 
         {detail.responses.length === 0 ? (
@@ -400,7 +500,7 @@ function EventDetail({ eventId }: { eventId: string }) {
                   <th>コメント</th>
                   <th>回答日時</th>
                   <th>最終更新者</th>
-                  <th className="action-column two-actions">操作</th>
+                  <th className="action-column three-actions">操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -411,7 +511,7 @@ function EventDetail({ eventId }: { eventId: string }) {
                     <td className="comment-cell">{response.comment || "-"}</td>
                     <td>{formatDateTime(response.answeredAt)}</td>
                     <td>{response.lastUpdatedBy === "admin" ? "管理者(Admin)" : "招待者(Guest)"}</td>
-                    <td className="action-column two-actions">
+                    <td className="action-column three-actions">
                       <div className="row-actions">
                         <button
                           className="secondary-button compact-button"
@@ -444,6 +544,19 @@ function EventDetail({ eventId }: { eventId: string }) {
                           type="button"
                         >
                           PINリセット
+                        </button>
+                        <button
+                          className="danger-button compact-button"
+                          data-tooltip="この回答を削除"
+                          disabled={deletingResponseId === response.id}
+                          onClick={() => {
+                            setError("");
+                            setNotice("");
+                            setDeleteTargetResponse(response);
+                          }}
+                          type="button"
+                        >
+                          削除
                         </button>
                       </div>
                     </td>
@@ -728,6 +841,18 @@ function EventDetail({ eventId }: { eventId: string }) {
           </section>
         </div>
       ) : null}
+
+      {deleteTargetResponse ? (
+        <ConfirmDialog
+          confirmLabel="削除する"
+          isProcessing={deletingResponseId === deleteTargetResponse.id}
+          message={`「${deleteTargetResponse.nickname}」の回答を削除します。出欠内訳と人数集計には表示されなくなります。`}
+          onCancel={() => setDeleteTargetResponse(null)}
+          onConfirm={handleDeleteResponse}
+          title="回答削除の確認"
+          variant="danger"
+        />
+      ) : null}
     </main>
   );
 }
@@ -742,6 +867,42 @@ function getAttendanceLabel(status: AttendanceStatus) {
   }
 
   return "×";
+}
+
+function getAttendanceCopySymbol(status: AttendanceStatus) {
+  if (status === "yes") {
+    return "〇";
+  }
+
+  if (status === "maybe") {
+    return "△";
+  }
+
+  return "×";
+}
+
+function buildAttendanceCopyText(detail: EventDetail) {
+  const responseLines =
+    detail.responses.length > 0
+      ? detail.responses.map((response) => {
+          const comment = response.comment.trim();
+          return [
+            response.nickname,
+            getAttendanceCopySymbol(response.attendanceStatus),
+            comment
+          ]
+            .filter(Boolean)
+            .join(" ");
+        })
+      : ["（回答なし）"];
+
+  return [
+    `日程：${formatEventDate(detail.event.eventDate)}`,
+    `時間帯：${formatEventTime(detail.event.timeSlot, detail.event.timeDetail)}`,
+    `場所：${detail.event.place}`,
+    "出欠：",
+    ...responseLines
+  ].join("\n");
 }
 
 function formatDateTime(value: string | null) {

@@ -593,7 +593,6 @@ export function InviteCompleteScreen({ publicToken }: { publicToken: string }) {
   return (
     <main className="invite-shell">
       <section className="panel invite-panel">
-        <p className="eyebrow">Complete</p>
         <h1>出欠入力が完了しました。</h1>
         <div className="notice-message top-message">
           <p>
@@ -617,6 +616,12 @@ export function InviteCompleteScreen({ publicToken }: { publicToken: string }) {
 
       <section className="panel invite-panel">
         <h2>入力内容</h2>
+        <div className="complete-plan-summary">
+          <h1>{detail.plan.name}</h1>
+          <p className="muted-text">
+            {detail.guest.nickname} / {formatYearMonth(detail.plan.yearMonth)}
+          </p>
+        </div>
         <div className="complete-response-list">
           {detail.events.map((inviteEvent) => {
             const comment = inviteEvent.response?.comment.trim();
@@ -624,11 +629,11 @@ export function InviteCompleteScreen({ publicToken }: { publicToken: string }) {
             return (
               <article className="complete-response-row" key={inviteEvent.id}>
                 <div className="complete-response-main">
-                  <p className="event-date">
+                  <h3 className="invite-event-date">
                     {formatEventDate(inviteEvent.eventDate)}{" "}
                     {formatEventTime(inviteEvent.timeSlot, inviteEvent.timeDetail)}
-                  </p>
-                  <h3>{inviteEvent.name || inviteEvent.place}</h3>
+                  </h3>
+                  <p className="invite-event-name">{inviteEvent.name || inviteEvent.place}</p>
                   {comment ? <p className="complete-response-comment">{comment}</p> : null}
                   <p className="muted-text">{inviteEvent.place}</p>
                 </div>
@@ -664,11 +669,11 @@ function InviteEventCard({
     <article className="panel invite-event-card">
       <div className="invite-event-heading">
         <div>
-          <p className="event-date">
+          <h2 className="invite-event-date">
             {formatEventDate(inviteEvent.eventDate)}{" "}
             {formatEventTime(inviteEvent.timeSlot, inviteEvent.timeDetail)}
-          </p>
-          <h2>{inviteEvent.name || inviteEvent.place}</h2>
+          </h2>
+          <p className="invite-event-name">{inviteEvent.name || inviteEvent.place}</p>
           <p className="muted-text">{inviteEvent.place}</p>
         </div>
         <span className={isClosed ? "status-badge muted" : "status-badge"}>
@@ -1021,7 +1026,23 @@ function formatEventDate(eventDate: string) {
     return eventDate;
   }
 
-  return `${year}/${month}/${day}`;
+  const yearNumber = Number(year);
+  const monthNumber = Number(month);
+  const dayNumber = Number(day);
+  const date = new Date(yearNumber, monthNumber - 1, dayNumber);
+
+  if (
+    Number.isNaN(date.getTime()) ||
+    date.getFullYear() !== yearNumber ||
+    date.getMonth() !== monthNumber - 1 ||
+    date.getDate() !== dayNumber
+  ) {
+    return eventDate;
+  }
+
+  const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
+
+  return `${monthNumber}月${dayNumber}日（${weekdays[date.getDay()]}）`;
 }
 
 function formatEventTime(timeSlot: InviteEvent["timeSlot"], timeDetail?: string) {

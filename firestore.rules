@@ -129,6 +129,7 @@ service cloud.firestore {
           'eventId',
           'guestId',
           'ownerUid',
+          'isActive',
           'attendanceStatus',
           'comment',
           'answeredAt',
@@ -142,6 +143,7 @@ service cloud.firestore {
         && validString(request.resource.data.eventId, 80)
         && validString(request.resource.data.guestId, 80)
         && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.isActive is bool
         && request.resource.data.attendanceStatus in ['yes', 'maybe', 'no']
         && (request.resource.data.comment == null || request.resource.data.comment is string && request.resource.data.comment.size() <= 500)
         && request.resource.data.answeredAt is timestamp
