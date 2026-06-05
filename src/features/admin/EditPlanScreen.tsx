@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
+import { RequiredMark, RequiredNote } from "@/features/ui/RequiredMark";
 import { getFirebaseClientFirestore } from "@/lib/firebase/client";
 import { AdminAccountMenu } from "./AdminAccountMenu";
 import { subscribeOwnerPlan, type AdminPlan } from "./plans/data";
@@ -140,10 +141,10 @@ function EditPlanForm({ planId }: { planId: string }) {
           </p>
           <Link
             className="secondary-button button-link top-message"
-            data-tooltip="プラン一覧へ戻る"
+            data-tooltip="マイプランへ戻る"
             href="/admin/plans"
           >
-            プラン一覧へ戻る
+            マイプランへ戻る
           </Link>
         </section>
       </main>
@@ -155,7 +156,7 @@ function EditPlanForm({ planId }: { planId: string }) {
       <header className="top-bar">
         <div className="page-heading">
           <div className="title-row">
-            <Link className="back-link" data-tooltip="プラン一覧へ戻る" href="/admin/plans">
+            <Link className="back-link" data-tooltip="マイプランへ戻る" href="/admin/plans">
               <span>←</span>
               <span>戻る</span>
             </Link>
@@ -180,12 +181,18 @@ function EditPlanForm({ planId }: { planId: string }) {
         ) : null}
 
         <form className="form-stack" onSubmit={handleSubmit}>
+          <RequiredNote />
+
           <label className="field">
-            <span>プラン名</span>
+            <span>
+              プラン名
+              <RequiredMark />
+            </span>
             <input
               disabled={isSubmitting || !plan.isActive}
               maxLength={80}
               onChange={(event) => setName(event.target.value)}
+              placeholder="例）7月イベント"
               required
               type="text"
               value={name}
@@ -193,7 +200,10 @@ function EditPlanForm({ planId }: { planId: string }) {
           </label>
 
           <label className="field">
-            <span>年月</span>
+            <span>
+              年月
+              <RequiredMark />
+            </span>
             <input
               disabled={isSubmitting || !plan.isActive}
               onChange={(event) => setYearMonth(event.target.value)}
@@ -278,7 +288,10 @@ function EditPlanForm({ planId }: { planId: string }) {
             </div>
             {accessCodeAction === "change" || accessCodeAction === "set" ? (
               <label className="field nested-field">
-                <span>アクセスコード</span>
+                <span>
+                  アクセスコード
+                  <RequiredMark />
+                </span>
                 <input
                   autoComplete="new-password"
                   disabled={isSubmitting || !plan.isActive}
@@ -286,6 +299,7 @@ function EditPlanForm({ planId }: { planId: string }) {
                   maxLength={12}
                   onChange={(event) => setAccessCode(event.target.value)}
                   pattern="[0-9]*"
+                  placeholder="例）123456"
                   type="text"
                   value={accessCode}
                 />
@@ -307,7 +321,7 @@ function EditPlanForm({ planId }: { planId: string }) {
             </button>
             <Link
               className="secondary-button button-link"
-              data-tooltip="変更せずにプラン一覧へ戻る"
+              data-tooltip="変更せずにマイプランへ戻る"
               href="/admin/plans"
             >
               キャンセル

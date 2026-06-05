@@ -258,10 +258,10 @@ function PlanDetail({ planId }: { planId: string }) {
           </p>
           <Link
             className="secondary-button button-link top-message"
-            data-tooltip="プラン一覧へ戻る"
+            data-tooltip="マイプランへ戻る"
             href="/admin/plans"
           >
-            プラン一覧へ戻る
+            マイプランへ戻る
           </Link>
         </section>
       </main>
@@ -273,7 +273,7 @@ function PlanDetail({ planId }: { planId: string }) {
       <header className="top-bar">
         <div className="page-heading">
           <div className="title-row">
-            <Link className="back-link" data-tooltip="プラン一覧へ戻る" href="/admin/plans">
+            <Link className="back-link" data-tooltip="マイプランへ戻る" href="/admin/plans">
               <span>←</span>
               <span>戻る</span>
             </Link>
@@ -391,6 +391,7 @@ function PlanDetail({ planId }: { planId: string }) {
                   <th>イベント</th>
                   <th>日程</th>
                   <th>時間帯</th>
+                  <th>詳細</th>
                   <th>場所</th>
                   <th className="status-column">状態</th>
                   <th className="attendance-column">出欠</th>
@@ -403,6 +404,7 @@ function PlanDetail({ planId }: { planId: string }) {
                     <td className="strong-cell">{getEventTitle(event)}</td>
                     <td>{formatEventDate(event.eventDate)}</td>
                     <td>{event.timeSlot}</td>
+                    <td>{event.timeDetail.trim() || "---"}</td>
                     <td>{event.place}</td>
                     <td className="status-column">
                       <div className="status-feedback-wrap">

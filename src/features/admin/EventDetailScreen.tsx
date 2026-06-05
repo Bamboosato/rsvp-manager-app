@@ -4,9 +4,10 @@ import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
+import { RequiredMark, RequiredNote } from "@/features/ui/RequiredMark";
 import { AdminAccountMenu } from "./AdminAccountMenu";
 import { AdminSectionMetrics } from "./AdminSectionMetrics";
-import { formatEventDate, getEventStatusLabel } from "./events/data";
+import { formatEventDate, formatEventTime, getEventStatusLabel } from "./events/data";
 import { formatYearMonth } from "./plans/data";
 
 type AttendanceStatus = "yes" | "maybe" | "no";
@@ -19,6 +20,7 @@ type EventDetail = {
     name: string;
     eventDate: string;
     timeSlot: string;
+    timeDetail: string;
     place: string;
     status: "accepting" | "closed";
     isActive: boolean;
@@ -290,10 +292,10 @@ function EventDetail({ eventId }: { eventId: string }) {
           {error ? <p className="error-message top-message">{error}</p> : null}
           <Link
             className="secondary-button button-link top-message"
-            data-tooltip="プラン一覧へ戻る"
+            data-tooltip="マイプランへ戻る"
             href="/admin/plans"
           >
-            プラン一覧へ戻る
+            マイプランへ戻る
           </Link>
         </section>
       </main>
@@ -333,7 +335,7 @@ function EventDetail({ eventId }: { eventId: string }) {
           </div>
           <div>
             <dt>時間帯</dt>
-            <dd>{detail.event.timeSlot}</dd>
+            <dd>{formatEventTime(detail.event.timeSlot, detail.event.timeDetail)}</dd>
           </div>
           <div>
             <dt>場所</dt>
@@ -468,25 +470,44 @@ function EventDetail({ eventId }: { eventId: string }) {
               </div>
             </div>
             <form className="form-stack" onSubmit={handleAddResponse}>
+              <RequiredNote />
+
               <div className="inline-form-grid">
                 <label className="field">
-                  <span>ニックネーム</span>
-                  <input disabled={isSubmitting} maxLength={40} name="nickname" required type="text" />
+                  <span>
+                    ニックネーム
+                    <RequiredMark />
+                  </span>
+                  <input
+                    disabled={isSubmitting}
+                    maxLength={40}
+                    name="nickname"
+                    placeholder="例）富浜 太郎"
+                    required
+                    type="text"
+                  />
                 </label>
                 <label className="field">
-                  <span>PIN（数字4桁）</span>
+                  <span>
+                    PIN（数字4桁）
+                    <RequiredMark />
+                  </span>
                   <input
                     disabled={isSubmitting}
                     inputMode="numeric"
                     maxLength={4}
                     name="pin"
                     pattern="\d{4}"
+                    placeholder="例）1234"
                     required
                     type="text"
                   />
                 </label>
                 <label className="field">
-                  <span>出欠</span>
+                  <span>
+                    出欠
+                    <RequiredMark />
+                  </span>
                   <select defaultValue="yes" disabled={isSubmitting} name="attendanceStatus" required>
                     <option value="yes">○ 出席</option>
                     <option value="maybe">△ 未定</option>
@@ -496,7 +517,13 @@ function EventDetail({ eventId }: { eventId: string }) {
               </div>
               <label className="field">
                 <span>コメント</span>
-                <textarea disabled={isSubmitting} maxLength={500} name="comment" rows={3} />
+                <textarea
+                  disabled={isSubmitting}
+                  maxLength={500}
+                  name="comment"
+                  placeholder="例）電話連絡"
+                  rows={3}
+                />
               </label>
               {error ? <p className="error-message">{error}</p> : null}
               <div className="form-actions">
@@ -544,8 +571,12 @@ function EventDetail({ eventId }: { eventId: string }) {
               <p className="notice-message">
                 この回答を管理者として修正します。回答日時も更新されます。
               </p>
+              <RequiredNote />
               <label className="field">
-                <span>出欠</span>
+                <span>
+                  出欠
+                  <RequiredMark />
+                </span>
                 <select
                   disabled={isSubmitting}
                   onChange={(event) =>
@@ -574,6 +605,7 @@ function EventDetail({ eventId }: { eventId: string }) {
                   }
                   rows={3}
                   value={editing.comment}
+                  placeholder="例）電話連絡"
                 />
               </label>
               {error ? <p className="error-message">{error}</p> : null}
@@ -622,9 +654,13 @@ function EventDetail({ eventId }: { eventId: string }) {
               <p className="notice-message">
                 PINリセットでは既存の出欠回答は変更されません。新しいPINはLINE等で招待者へ連絡してください。
               </p>
+              <RequiredNote />
               <div className="inline-form-grid two-columns">
                 <label className="field">
-                  <span>新PIN（数字4桁）</span>
+                  <span>
+                    新PIN（数字4桁）
+                    <RequiredMark />
+                  </span>
                   <input
                     disabled={isSubmitting}
                     inputMode="numeric"
@@ -636,13 +672,17 @@ function EventDetail({ eventId }: { eventId: string }) {
                       })
                     }
                     pattern="\d{4}"
+                    placeholder="例）1234"
                     required
                     type="text"
                     value={pinReset.newPin}
                   />
                 </label>
                 <label className="field">
-                  <span>新PIN確認（数字4桁）</span>
+                  <span>
+                    新PIN確認（数字4桁）
+                    <RequiredMark />
+                  </span>
                   <input
                     disabled={isSubmitting}
                     inputMode="numeric"
@@ -654,6 +694,7 @@ function EventDetail({ eventId }: { eventId: string }) {
                       })
                     }
                     pattern="\d{4}"
+                    placeholder="例）1234"
                     required
                     type="text"
                     value={pinReset.confirmPin}

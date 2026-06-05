@@ -5,10 +5,16 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
+import { RequiredMark, RequiredNote } from "@/features/ui/RequiredMark";
 import { getFirebaseClientFirestore } from "@/lib/firebase/client";
 import { AdminAccountMenu } from "./AdminAccountMenu";
 import { createEvent, type EventTimeSlot } from "./events/data";
 import { subscribeOwnerPlan, type AdminPlan } from "./plans/data";
+
+type EventDateRange = {
+  max: string;
+  min: string;
+};
 
 export function NewEventScreen({ planId }: { planId: string }) {
   return (
@@ -65,11 +71,14 @@ function NewEventForm({ planId }: { planId: string }) {
     const name = String(formData.get("name") ?? "").trim();
     const eventDate = String(formData.get("eventDate") ?? "").trim();
     const timeSlotValue = String(formData.get("timeSlot") ?? "");
+    const timeDetail = String(formData.get("timeDetail") ?? "").trim();
     const place = String(formData.get("place") ?? "").trim();
     const validation = validateEventInput({
       name,
       eventDate,
+      eventDateRange: getEventDateRange(plan.yearMonth),
       timeSlot: timeSlotValue,
+      timeDetail,
       place
     });
 
@@ -87,6 +96,7 @@ function NewEventForm({ planId }: { planId: string }) {
         name,
         eventDate,
         timeSlot: validation.timeSlot,
+        timeDetail,
         place
       });
       router.push(`/admin/plans/${plan.id}`);
@@ -118,15 +128,17 @@ function NewEventForm({ planId }: { planId: string }) {
           </p>
           <Link
             className="secondary-button button-link top-message"
-            data-tooltip="プラン一覧へ戻る"
+            data-tooltip="マイプランへ戻る"
             href="/admin/plans"
           >
-            プラン一覧へ戻る
+            マイプランへ戻る
           </Link>
         </section>
       </main>
     );
   }
+
+  const eventDateRange = getEventDateRange(plan.yearMonth);
 
   return (
     <main className="app-shell">
@@ -162,6 +174,8 @@ function NewEventForm({ planId }: { planId: string }) {
         ) : null}
 
         <form className="form-stack" onSubmit={handleSubmit}>
+          <RequiredNote />
+
           <label className="field">
             <span>イベント名（任意）</span>
             <input
@@ -169,17 +183,31 @@ function NewEventForm({ planId }: { planId: string }) {
               disabled={isSubmitting || !plan.isActive}
               maxLength={80}
               name="name"
+              placeholder="例）7月イベント"
               type="text"
             />
           </label>
 
           <label className="field">
-            <span>日程</span>
-            <input disabled={isSubmitting || !plan.isActive} name="eventDate" required type="date" />
+            <span>
+              日程
+              <RequiredMark />
+            </span>
+            <input
+              disabled={isSubmitting || !plan.isActive}
+              max={eventDateRange?.max}
+              min={eventDateRange?.min}
+              name="eventDate"
+              required
+              type="date"
+            />
           </label>
 
           <label className="field">
-            <span>時間帯</span>
+            <span>
+              時間帯
+              <RequiredMark />
+            </span>
             <select
               defaultValue="AM"
               disabled={isSubmitting || !plan.isActive}
@@ -192,11 +220,26 @@ function NewEventForm({ planId }: { planId: string }) {
           </label>
 
           <label className="field">
-            <span>場所</span>
+            <span>詳細</span>
+            <input
+              disabled={isSubmitting || !plan.isActive}
+              maxLength={40}
+              name="timeDetail"
+              placeholder="例）9:00-12:00"
+              type="text"
+            />
+          </label>
+
+          <label className="field">
+            <span>
+              場所
+              <RequiredMark />
+            </span>
             <input
               disabled={isSubmitting || !plan.isActive}
               maxLength={120}
               name="place"
+              placeholder="例）ABCDコート"
               required
               type="text"
             />
@@ -230,7 +273,9 @@ function NewEventForm({ planId }: { planId: string }) {
 function validateEventInput(input: {
   name: string;
   eventDate: string;
+  eventDateRange: EventDateRange | null;
   timeSlot: string;
+  timeDetail: string;
   place: string;
 }):
   | { ok: true; timeSlot: EventTimeSlot }
@@ -243,8 +288,22 @@ function validateEventInput(input: {
     return { ok: false, message: "日程を選択してください。" };
   }
 
+  if (
+    input.eventDateRange &&
+    (input.eventDate < input.eventDateRange.min || input.eventDate > input.eventDateRange.max)
+  ) {
+    return {
+      ok: false,
+      message: `日程は${formatDateRangeLabel(input.eventDateRange)}の範囲で選択してください。`
+    };
+  }
+
   if (input.timeSlot !== "AM" && input.timeSlot !== "PM") {
     return { ok: false, message: "時間帯を選択してください。" };
+  }
+
+  if (input.timeDetail.length > 40) {
+    return { ok: false, message: "時間帯詳細は40文字以内で入力してください。" };
   }
 
   if (!input.place) {
@@ -256,4 +315,33 @@ function validateEventInput(input: {
   }
 
   return { ok: true, timeSlot: input.timeSlot };
+}
+
+function getEventDateRange(yearMonth: string): EventDateRange | null {
+  const match = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(yearMonth);
+
+  if (!match) {
+    return null;
+  }
+
+  const year = Number(match[1]);
+  const monthIndex = Number(match[2]) - 1;
+  const maxDate = new Date(year, monthIndex + 3, 0);
+
+  return {
+    min: `${match[1]}-${match[2]}-01`,
+    max: formatDateInputValue(maxDate)
+  };
+}
+
+function formatDateInputValue(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function formatDateRangeLabel(range: EventDateRange) {
+  return `${range.min.replaceAll("-", "/")}〜${range.max.replaceAll("-", "/")}`;
 }

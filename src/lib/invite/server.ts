@@ -24,6 +24,7 @@ export type InviteEvent = {
   name: string;
   eventDate: string;
   timeSlot: "AM" | "PM";
+  timeDetail: string;
   place: string;
   status: "accepting" | "closed";
   sortOrder: number;
@@ -285,6 +286,7 @@ function mapEvent(id: string, data: FirebaseFirestore.DocumentData): InviteEvent
     name: String(data.name ?? ""),
     eventDate: String(data.eventDate ?? ""),
     timeSlot: data.timeSlot === "PM" ? "PM" : "AM",
+    timeDetail: String(data.timeDetail ?? ""),
     place: String(data.place ?? ""),
     status: data.status === "closed" ? "closed" : "accepting",
     sortOrder: typeof data.sortOrder === "number" ? data.sortOrder : 0,

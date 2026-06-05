@@ -62,7 +62,7 @@ function AdminPlansDashboard() {
         setIsLoading(false);
       },
       onError: () => {
-        setError("プラン一覧の取得に失敗しました。");
+        setError("マイプランの取得に失敗しました。");
         setIsLoading(false);
       }
     });
@@ -163,21 +163,21 @@ function AdminPlansDashboard() {
         <div className="page-heading">
           <div className="title-row">
             <Link
-              aria-label="プラン一覧へ移動"
+              aria-label="マイプランへ移動"
               className="header-mark brand-mark"
-              data-tooltip="プラン一覧へ移動"
+              data-tooltip="マイプランへ移動"
               href="/admin/plans"
             >
               <span>RSVP</span>
               <span>HUB</span>
             </Link>
-            <h1>プラン一覧</h1>
+            <h1>マイプラン</h1>
           </div>
         </div>
         <AdminAccountMenu user={user} onSignOut={signOut} />
       </header>
 
-      <section className="panel" aria-label="プラン一覧">
+      <section className="panel" aria-label="マイプラン">
         <div className="section-heading">
           <div>
             <p className="eyebrow">Plans</p>

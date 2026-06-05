@@ -330,6 +330,7 @@ async function getOwnedEvent({
     name: firestoreString(eventDocument.fields, "name"),
     eventDate: firestoreString(eventDocument.fields, "eventDate"),
     timeSlot: firestoreString(eventDocument.fields, "timeSlot"),
+    timeDetail: firestoreString(eventDocument.fields, "timeDetail"),
     place: firestoreString(eventDocument.fields, "place"),
     status: firestoreString(eventDocument.fields, "status"),
     isActive: firestoreBoolean(eventDocument.fields, "isActive")

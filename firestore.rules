@@ -74,6 +74,7 @@ service cloud.firestore {
           'name',
           'eventDate',
           'timeSlot',
+          'timeDetail',
           'place',
           'status',
           'sortOrder',
@@ -87,6 +88,7 @@ service cloud.firestore {
         && validOptionalString(request.resource.data.name, 80)
         && request.resource.data.eventDate.matches('^\\d{4}-\\d{2}-\\d{2}$')
         && request.resource.data.timeSlot in ['AM', 'PM']
+        && validOptionalString(request.resource.data.timeDetail, 40)
         && validString(request.resource.data.place, 120)
         && request.resource.data.status in ['accepting', 'closed']
         && request.resource.data.sortOrder is number

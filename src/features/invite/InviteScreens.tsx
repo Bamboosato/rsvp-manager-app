@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
+import { RequiredMark, RequiredNote } from "@/features/ui/RequiredMark";
 
 type AttendanceStatus = "yes" | "maybe" | "no";
 
@@ -41,6 +42,7 @@ type InviteEvent = {
   id: string;
   eventDate: string;
   timeSlot: "AM" | "PM";
+  timeDetail: string;
   name: string;
   place: string;
   status: "accepting" | "closed";
@@ -160,8 +162,13 @@ export function InviteStartScreen({ publicToken }: { publicToken: string }) {
 
         {plan.hasPassword ? (
           <form className="form-stack top-message" onSubmit={handlePasswordSubmit}>
+            <RequiredNote />
+
             <label className="field">
-              <span>アクセスコード</span>
+              <span>
+                アクセスコード
+                <RequiredMark />
+              </span>
               <input
                 autoComplete="current-password"
                 disabled={isSubmitting}
@@ -169,6 +176,7 @@ export function InviteStartScreen({ publicToken }: { publicToken: string }) {
                 maxLength={12}
                 onChange={(event) => setAccessCode(event.target.value)}
                 pattern="[0-9]*"
+                placeholder="例）123456"
                 required
                 type="text"
                 value={accessCode}
@@ -295,26 +303,36 @@ export function InviteEntryScreen({ publicToken }: { publicToken: string }) {
         <p className="muted-text">{formatYearMonth(plan.yearMonth)}</p>
 
         <form className="form-stack top-message" onSubmit={handleSubmit}>
+          <RequiredNote />
+
           <label className="field">
-            <span>ニックネーム</span>
+            <span>
+              ニックネーム
+              <RequiredMark />
+            </span>
             <input
               autoComplete="name"
               disabled={isSubmitting}
               maxLength={40}
               onChange={(event) => setNickname(event.target.value)}
+              placeholder="例）富浜 太郎"
               required
               type="text"
               value={nickname}
             />
           </label>
           <label className="field">
-            <span>PIN（数字4桁）</span>
+            <span>
+              PIN（数字4桁）
+              <RequiredMark />
+            </span>
             <input
               disabled={isSubmitting}
               inputMode="numeric"
               maxLength={4}
               onChange={(event) => setPin(event.target.value)}
               pattern="\d{4}"
+              placeholder="例）1234"
               required
               type="text"
               value={pin}
@@ -517,6 +535,7 @@ export function InviteResponsesScreen({ publicToken }: { publicToken: string }) 
 }
 
 export function InviteCompleteScreen({ publicToken }: { publicToken: string }) {
+  const router = useRouter();
   const [detail, setDetail] = useState<InviteResponseDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -561,6 +580,16 @@ export function InviteCompleteScreen({ publicToken }: { publicToken: string }) {
     );
   }
 
+  const completeDetail = detail;
+
+  function handleContinueEntry() {
+    clearCachedInviteGuestCredential({
+      publicToken,
+      plan: completeDetail.plan
+    });
+    router.push(`/invite/${publicToken}/entry`);
+  }
+
   return (
     <main className="invite-shell">
       <section className="panel invite-panel">
@@ -574,6 +603,16 @@ export function InviteCompleteScreen({ publicToken }: { publicToken: string }) {
             締切後に出欠を変更する場合、画面から変更できませんので管理者に直接ご連絡ください。
           </p>
         </div>
+        <div className="invite-complete-actions">
+          <button
+            className="secondary-button"
+            data-tooltip="別の招待者として続けて入力"
+            onClick={handleContinueEntry}
+            type="button"
+          >
+            続けて出欠入力
+          </button>
+        </div>
       </section>
 
       <section className="panel invite-panel">
@@ -583,7 +622,8 @@ export function InviteCompleteScreen({ publicToken }: { publicToken: string }) {
             <article className="complete-response-row" key={inviteEvent.id}>
               <div>
                 <p className="event-date">
-                  {formatEventDate(inviteEvent.eventDate)} {inviteEvent.timeSlot}
+                  {formatEventDate(inviteEvent.eventDate)}{" "}
+                  {formatEventTime(inviteEvent.timeSlot, inviteEvent.timeDetail)}
                 </p>
                 <h3>{inviteEvent.name || inviteEvent.place}</h3>
                 <p className="muted-text">{inviteEvent.place}</p>
@@ -621,7 +661,8 @@ function InviteEventCard({
       <div className="invite-event-heading">
         <div>
           <p className="event-date">
-            {formatEventDate(inviteEvent.eventDate)} {inviteEvent.timeSlot}
+            {formatEventDate(inviteEvent.eventDate)}{" "}
+            {formatEventTime(inviteEvent.timeSlot, inviteEvent.timeDetail)}
           </p>
           <h2>{inviteEvent.name || inviteEvent.place}</h2>
           <p className="muted-text">{inviteEvent.place}</p>
@@ -674,6 +715,7 @@ function InviteEventCard({
               comment: event.target.value
             })
           }
+          placeholder="例）少し遅れるかもしれません"
           rows={3}
           value={answer.comment}
         />
@@ -814,6 +856,40 @@ function saveCachedInviteCredential({
   writeCachedInviteCredentialStore(store);
 }
 
+function clearCachedInviteGuestCredential({
+  publicToken,
+  plan
+}: {
+  publicToken: string;
+  plan: PublicPlan;
+}) {
+  const store = readCachedInviteCredentialStore();
+  const planKey = buildPlanCredentialKey(plan);
+  const tokenCredential = store.byToken[publicToken];
+  const planCredential = store.byPlan[planKey];
+
+  if (tokenCredential) {
+    store.byToken[publicToken] = omitGuestCredential(tokenCredential);
+  }
+
+  if (planCredential) {
+    store.byPlan[planKey] = omitGuestCredential(planCredential);
+  }
+
+  writeCachedInviteCredentialStore(store);
+}
+
+function omitGuestCredential(credential: CachedInviteCredential): CachedInviteCredential {
+  const nextCredential = { ...credential };
+  delete nextCredential.nickname;
+  delete nextCredential.pin;
+
+  return {
+    ...nextCredential,
+    updatedAt: Date.now()
+  };
+}
+
 function readCachedInviteCredentialStore(): CachedInviteCredentialStore {
   if (typeof window === "undefined") {
     return createEmptyCachedInviteCredentialStore();
@@ -942,6 +1018,12 @@ function formatEventDate(eventDate: string) {
   }
 
   return `${year}/${month}/${day}`;
+}
+
+function formatEventTime(timeSlot: InviteEvent["timeSlot"], timeDetail?: string) {
+  const detail = timeDetail?.trim();
+
+  return detail ? `${timeSlot} ${detail}` : timeSlot;
 }
 
 function getAttendanceLabel(status: AttendanceStatus | undefined) {

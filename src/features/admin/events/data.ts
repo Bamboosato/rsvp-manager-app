@@ -28,6 +28,7 @@ export type AdminEvent = {
   name: string;
   eventDate: string;
   timeSlot: EventTimeSlot;
+  timeDetail: string;
   place: string;
   status: EventStatus;
   sortOrder: number;
@@ -42,6 +43,7 @@ export type CreateEventInput = {
   name: string;
   eventDate: string;
   timeSlot: EventTimeSlot;
+  timeDetail: string;
   place: string;
 };
 
@@ -50,6 +52,7 @@ export type UpdateEventInput = {
   name: string;
   eventDate: string;
   timeSlot: EventTimeSlot;
+  timeDetail: string;
   place: string;
   status: EventStatus;
 };
@@ -155,6 +158,7 @@ export async function createEvent(db: Firestore, input: CreateEventInput) {
     name: input.name.trim(),
     eventDate: input.eventDate,
     timeSlot: input.timeSlot,
+    timeDetail: input.timeDetail.trim(),
     place: input.place.trim(),
     status: "accepting",
     sortOrder: Date.now(),
@@ -186,6 +190,7 @@ export async function updateEventDetails(db: Firestore, input: UpdateEventInput)
     name: input.name.trim(),
     eventDate: input.eventDate,
     timeSlot: input.timeSlot,
+    timeDetail: input.timeDetail.trim(),
     place: input.place.trim(),
     status: input.status,
     updatedAt: serverTimestamp()
@@ -209,6 +214,12 @@ export function formatEventDate(eventDate: string) {
   return `${year}/${month}/${day}`;
 }
 
+export function formatEventTime(timeSlot: EventTimeSlot | string, timeDetail?: string) {
+  const detail = timeDetail?.trim();
+
+  return detail ? `${timeSlot} ${detail}` : timeSlot;
+}
+
 export function getEventStatusLabel(status: EventStatus) {
   return status === "accepting" ? "受付中" : "締切済";
 }
@@ -230,6 +241,7 @@ function mapEventSnapshot(
     name: String(data.name ?? ""),
     eventDate: String(data.eventDate ?? ""),
     timeSlot: data.timeSlot === "PM" ? "PM" : "AM",
+    timeDetail: String(data.timeDetail ?? ""),
     place: String(data.place ?? ""),
     status: data.status === "closed" ? "closed" : "accepting",
     sortOrder: typeof data.sortOrder === "number" ? data.sortOrder : 0,

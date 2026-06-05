@@ -4,6 +4,7 @@ import { FirebaseError } from "firebase/app";
 import { sendPasswordResetEmail } from "firebase/auth";
 import Link from "next/link";
 import { FormEvent, useState } from "react";
+import { RequiredMark, RequiredNote } from "@/features/ui/RequiredMark";
 import { useAuth } from "./AuthProvider";
 
 export function PasswordResetForm() {
@@ -37,12 +38,18 @@ export function PasswordResetForm() {
 
   return (
     <form className="form-stack" onSubmit={handleSubmit}>
+      <RequiredNote />
+
       <label className="field">
-        <span>メールアドレス</span>
+        <span>
+          メールアドレス
+          <RequiredMark />
+        </span>
         <input
           autoComplete="email"
           disabled={isSubmitting}
           onChange={(event) => setEmail(event.target.value)}
+          placeholder="例）name@example.com"
           required
           type="email"
           value={email}

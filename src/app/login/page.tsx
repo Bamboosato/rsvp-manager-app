@@ -7,7 +7,7 @@ export default function LoginPage() {
   return (
     <AuthPageShell
       description="幹事さんアカウントでログインしてください。"
-      title="管理画面ログイン"
+      title="ログイン"
     >
       <Suspense fallback={null}>
         <LoginCloseButton />
