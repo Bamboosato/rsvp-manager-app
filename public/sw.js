@@ -1,4 +1,4 @@
-const CACHE_VERSION = "rsvp-hub-v6";
+const CACHE_VERSION = "rsvp-hub-v7";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const NAVIGATION_CACHE = `${CACHE_VERSION}-navigation`;
 const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "::1"]);
@@ -154,15 +154,12 @@ async function networkFirstNavigation(request) {
 }
 
 async function setAppBadge(count) {
-  if (
-    !("setAppBadge" in self.registration) ||
-    typeof self.registration.setAppBadge !== "function"
-  ) {
+  if (!("setAppBadge" in self.navigator) || typeof self.navigator.setAppBadge !== "function") {
     return;
   }
 
   try {
-    await self.registration.setAppBadge(count);
+    await self.navigator.setAppBadge(count);
   } catch (error) {
     console.error("Failed to set app badge.", error);
   }
@@ -170,14 +167,14 @@ async function setAppBadge(count) {
 
 async function clearAppBadge() {
   if (
-    !("clearAppBadge" in self.registration) ||
-    typeof self.registration.clearAppBadge !== "function"
+    !("clearAppBadge" in self.navigator) ||
+    typeof self.navigator.clearAppBadge !== "function"
   ) {
     return;
   }
 
   try {
-    await self.registration.clearAppBadge();
+    await self.navigator.clearAppBadge();
   } catch (error) {
     console.error("Failed to clear app badge.", error);
   }
