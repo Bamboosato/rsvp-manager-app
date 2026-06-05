@@ -212,61 +212,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
   const responseId = `${eventId}_${guestId}`;
   const now = new Date().toISOString();
-  const existingResponse = await getFirestoreDocument({
-    idToken: authUser.idToken,
-    collection: "responses",
-    documentId: responseId
-  });
-
-  if (existingResponse) {
-    if (
-      firestoreString(existingResponse.fields, "ownerUid") !== authUser.uid ||
-      firestoreString(existingResponse.fields, "eventId") !== eventId ||
-      firestoreString(existingResponse.fields, "guestId") !== guestId
-    ) {
-      return NextResponse.json(
-        { message: "この招待者の回答は既に登録されています。修正から更新してください。" },
-        { status: 409 }
-      );
-    }
-
-    if (isActiveResponseDocument(existingResponse)) {
-      return NextResponse.json(
-        { message: "この招待者の回答は既に登録されています。修正から更新してください。" },
-        { status: 409 }
-      );
-    }
-
-    await patchFirestoreDocument({
-      idToken: authUser.idToken,
-      collection: "responses",
-      documentId: responseId,
-      fields: createResponseUpdateFields({
-        attendanceStatus: validation.attendanceStatus,
-        comment: validation.comment,
-        lastUpdatedByUid: authUser.uid,
-        now,
-        isActive: true
-      })
-    });
-    await createFirestoreDocument({
-      idToken: authUser.idToken,
-      collection: "auditLogs",
-      documentId: randomUUID(),
-      fields: createAuditLogFields({
-        ownerUid: authUser.uid,
-        actorUid: authUser.uid,
-        action: "admin_response_restore",
-        targetType: "response",
-        targetId: responseId,
-        summary: `${validation.nickname} の回答を代理追加`,
-        now
-      })
-    });
-
-    return NextResponse.json({ responseId }, { status: 201 });
-  }
-
   try {
     await createFirestoreDocument({
       idToken: authUser.idToken,
@@ -286,6 +231,49 @@ export async function POST(request: NextRequest, context: RouteContext) {
     });
   } catch (error) {
     if (error instanceof Error && error.message.includes("409")) {
+      const existingResponse = await getFirestoreDocument({
+        idToken: authUser.idToken,
+        collection: "responses",
+        documentId: responseId
+      });
+
+      if (
+        existingResponse &&
+        firestoreString(existingResponse.fields, "ownerUid") === authUser.uid &&
+        firestoreString(existingResponse.fields, "eventId") === eventId &&
+        firestoreString(existingResponse.fields, "guestId") === guestId &&
+        !isActiveResponseDocument(existingResponse)
+      ) {
+        await patchFirestoreDocument({
+          idToken: authUser.idToken,
+          collection: "responses",
+          documentId: responseId,
+          fields: createResponseUpdateFields({
+            attendanceStatus: validation.attendanceStatus,
+            comment: validation.comment,
+            lastUpdatedByUid: authUser.uid,
+            now,
+            isActive: true
+          })
+        });
+        await createFirestoreDocument({
+          idToken: authUser.idToken,
+          collection: "auditLogs",
+          documentId: randomUUID(),
+          fields: createAuditLogFields({
+            ownerUid: authUser.uid,
+            actorUid: authUser.uid,
+            action: "admin_response_restore",
+            targetType: "response",
+            targetId: responseId,
+            summary: `${validation.nickname} の回答を代理追加`,
+            now
+          })
+        });
+
+        return NextResponse.json({ responseId }, { status: 201 });
+      }
+
       return NextResponse.json(
         { message: "この招待者の回答は既に登録されています。修正から更新してください。" },
         { status: 409 }
