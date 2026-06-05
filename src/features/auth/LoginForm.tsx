@@ -5,6 +5,7 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
+import { RequiredMark, RequiredNote } from "@/features/ui/RequiredMark";
 import { useAuth } from "./AuthProvider";
 
 export function LoginForm() {
@@ -49,6 +50,8 @@ export function LoginForm() {
 
   return (
     <form className="form-stack" onSubmit={handleSubmit}>
+      <RequiredNote />
+
       {!isConfigured ? (
         <p className="notice-message">
           Firebase設定が未設定です。`.env.local` にFirebase Web Appの設定値を登録してください。
@@ -56,11 +59,15 @@ export function LoginForm() {
       ) : null}
 
       <label className="field">
-        <span>メールアドレス</span>
+        <span>
+          メールアドレス
+          <RequiredMark />
+        </span>
         <input
           autoComplete="email"
           disabled={isLoading || isSubmitting}
           onChange={(event) => setEmail(event.target.value)}
+          placeholder="例）name@example.com"
           required
           type="email"
           value={email}
@@ -68,11 +75,15 @@ export function LoginForm() {
       </label>
 
       <label className="field">
-        <span>パスワード</span>
+        <span>
+          パスワード
+          <RequiredMark />
+        </span>
         <input
           autoComplete="current-password"
           disabled={isLoading || isSubmitting}
           onChange={(event) => setPassword(event.target.value)}
+          placeholder="パスワード"
           required
           type="password"
           value={password}

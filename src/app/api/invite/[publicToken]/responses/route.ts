@@ -76,6 +76,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
           id: event.id,
           eventDate: event.eventDate,
           timeSlot: event.timeSlot,
+          timeDetail: event.timeDetail,
           name: event.name,
           place: event.place,
           status: event.status,

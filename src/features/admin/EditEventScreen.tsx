@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
+import { RequiredMark, RequiredNote } from "@/features/ui/RequiredMark";
 import { getFirebaseClientFirestore } from "@/lib/firebase/client";
 import { AdminAccountMenu } from "./AdminAccountMenu";
 import {
@@ -46,6 +47,7 @@ function EditEventForm({
   const [name, setName] = useState("");
   const [eventDate, setEventDate] = useState("");
   const [timeSlot, setTimeSlot] = useState<EventTimeSlot>("AM");
+  const [timeDetail, setTimeDetail] = useState("");
   const [place, setPlace] = useState("");
   const [status, setStatus] = useState<EventStatus>("accepting");
   const [isPlanLoading, setIsPlanLoading] = useState(true);
@@ -87,6 +89,7 @@ function EditEventForm({
         setName(nextEvent?.name ?? "");
         setEventDate(nextEvent?.eventDate ?? "");
         setTimeSlot(nextEvent?.timeSlot ?? "AM");
+        setTimeDetail(nextEvent?.timeDetail ?? "");
         setPlace(nextEvent?.place ?? "");
         setStatus(nextEvent?.status ?? "accepting");
         setIsEventLoading(false);
@@ -116,6 +119,7 @@ function EditEventForm({
       name,
       eventDate,
       timeSlot,
+      timeDetail,
       place,
       status
     });
@@ -133,6 +137,7 @@ function EditEventForm({
         name,
         eventDate,
         timeSlot,
+        timeDetail,
         place,
         status
       });
@@ -209,19 +214,25 @@ function EditEventForm({
         ) : null}
 
         <form className="form-stack" onSubmit={handleSubmit}>
+          <RequiredNote />
+
           <label className="field">
             <span>イベント名（任意）</span>
             <input
               disabled={isSubmitting || !canEdit}
               maxLength={80}
               onChange={(event) => setName(event.target.value)}
+              placeholder="例）7月イベント"
               type="text"
               value={name}
             />
           </label>
 
           <label className="field">
-            <span>日程</span>
+            <span>
+              日程
+              <RequiredMark />
+            </span>
             <input
               disabled={isSubmitting || !canEdit}
               onChange={(event) => setEventDate(event.target.value)}
@@ -232,7 +243,10 @@ function EditEventForm({
           </label>
 
           <label className="field">
-            <span>時間帯</span>
+            <span>
+              時間帯
+              <RequiredMark />
+            </span>
             <select
               disabled={isSubmitting || !canEdit}
               onChange={(event) => setTimeSlot(event.target.value as EventTimeSlot)}
@@ -245,11 +259,27 @@ function EditEventForm({
           </label>
 
           <label className="field">
-            <span>場所</span>
+            <span>詳細</span>
+            <input
+              disabled={isSubmitting || !canEdit}
+              maxLength={40}
+              onChange={(event) => setTimeDetail(event.target.value)}
+              placeholder="例）9:00-12:00"
+              type="text"
+              value={timeDetail}
+            />
+          </label>
+
+          <label className="field">
+            <span>
+              場所
+              <RequiredMark />
+            </span>
             <input
               disabled={isSubmitting || !canEdit}
               maxLength={120}
               onChange={(event) => setPlace(event.target.value)}
+              placeholder="例）ABCDコート"
               required
               type="text"
               value={place}
@@ -257,7 +287,10 @@ function EditEventForm({
           </label>
 
           <label className="field">
-            <span>ステータス</span>
+            <span>
+              ステータス
+              <RequiredMark />
+            </span>
             <select
               disabled={isSubmitting || !canEdit}
               onChange={(event) => setStatus(event.target.value as EventStatus)}
@@ -298,6 +331,7 @@ function validateEventInput(input: {
   name: string;
   eventDate: string;
   timeSlot: string;
+  timeDetail: string;
   place: string;
   status: string;
 }): { ok: true } | { ok: false; message: string } {
@@ -311,6 +345,10 @@ function validateEventInput(input: {
 
   if (input.timeSlot !== "AM" && input.timeSlot !== "PM") {
     return { ok: false, message: "時間帯を選択してください。" };
+  }
+
+  if (input.timeDetail.trim().length > 40) {
+    return { ok: false, message: "時間帯詳細は40文字以内で入力してください。" };
   }
 
   if (!input.place.trim()) {

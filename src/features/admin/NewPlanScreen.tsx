@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
+import { RequiredMark, RequiredNote } from "@/features/ui/RequiredMark";
 import { AdminAccountMenu } from "./AdminAccountMenu";
 
 type AccessCodeMode = "none" | "set";
@@ -85,7 +86,7 @@ function NewPlanForm() {
       <header className="top-bar">
         <div className="page-heading">
           <div className="title-row">
-            <Link className="back-link" data-tooltip="プラン一覧へ戻る" href="/admin/plans">
+            <Link className="back-link" data-tooltip="マイプランへ戻る" href="/admin/plans">
               <span>←</span>
               <span>戻る</span>
             </Link>
@@ -104,19 +105,28 @@ function NewPlanForm() {
         </div>
 
         <form className="form-stack" onSubmit={handleSubmit}>
+          <RequiredNote />
+
           <label className="field">
-            <span>プラン名</span>
+            <span>
+              プラン名
+              <RequiredMark />
+            </span>
             <input
               disabled={isSubmitting}
               maxLength={80}
               name="name"
+              placeholder="例）7月イベント"
               required
               type="text"
             />
           </label>
 
           <label className="field">
-            <span>年月</span>
+            <span>
+              年月
+              <RequiredMark />
+            </span>
             <input
               defaultValue={getCurrentYearMonth()}
               disabled={isSubmitting}
@@ -156,7 +166,10 @@ function NewPlanForm() {
             </div>
             {accessCodeMode === "set" ? (
               <label className="field nested-field">
-                <span>アクセスコード</span>
+                <span>
+                  アクセスコード
+                  <RequiredMark />
+                </span>
                 <input
                   autoComplete="new-password"
                   disabled={isSubmitting}
@@ -164,6 +177,7 @@ function NewPlanForm() {
                   maxLength={12}
                   onChange={(event) => setAccessCode(event.target.value)}
                   pattern="[0-9]*"
+                  placeholder="例）123456"
                   type="text"
                   value={accessCode}
                 />
@@ -185,7 +199,7 @@ function NewPlanForm() {
             </button>
             <Link
               className="secondary-button button-link"
-              data-tooltip="作成せずにプラン一覧へ戻る"
+              data-tooltip="作成せずにマイプランへ戻る"
               href="/admin/plans"
             >
               キャンセル

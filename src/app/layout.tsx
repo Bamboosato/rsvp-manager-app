@@ -1,9 +1,16 @@
 import type { Metadata } from "next";
+import { Noto_Sans_JP } from "next/font/google";
 import { AuthProvider } from "@/features/auth/AuthProvider";
 import { LegalFooter } from "@/features/legal/LegalFooter";
 import { ServiceWorkerRegistration } from "@/features/pwa/ServiceWorkerRegistration";
 import { GlobalTooltip } from "@/features/ui/GlobalTooltip";
 import "./globals.css";
+
+const notoSansJp = Noto_Sans_JP({
+  display: "swap",
+  subsets: ["latin"],
+  weight: ["400", "500", "700", "800"]
+});
 
 export const metadata: Metadata = {
   title: "RSVP Hub",
@@ -28,7 +35,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja">
-      <body>
+      <body className={notoSansJp.className}>
         <AuthProvider>
           <ServiceWorkerRegistration />
           {children}

@@ -59,8 +59,14 @@ export function PublicHomeScreen() {
   return (
     <main className="public-page">
       <header className="public-header">
-        <Link className="public-brand" data-tooltip="トップへ戻る" href="/">
-          RSVP Hub
+        <Link
+          aria-label="トップへ戻る"
+          className="public-brand header-mark brand-mark"
+          data-tooltip="トップへ戻る"
+          href="/"
+        >
+          <span>RSVP</span>
+          <span>HUB</span>
         </Link>
         <Link className="primary-button button-link" data-tooltip="管理画面にログイン" href={loginHref}>
           ログイン

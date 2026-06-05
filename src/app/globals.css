@@ -31,9 +31,10 @@ body {
   color: var(--text);
   background: var(--background);
   font-family:
-    Arial,
+    "Noto Sans JP",
     "Hiragino Kaku Gothic ProN",
     "Yu Gothic",
+    Arial,
     Meiryo,
     sans-serif;
 }
@@ -488,28 +489,25 @@ h3 {
 }
 
 .public-page {
-  padding-top: 76px;
+  width: min(1180px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 32px 0 48px;
 }
 
 .public-header {
-  position: fixed;
-  z-index: 40;
-  top: 0;
-  right: 0;
-  left: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 64px;
-  border-bottom: 1px solid var(--border);
-  padding: 10px max(16px, calc((100vw - 960px) / 2));
-  background: rgba(255, 255, 255, 0.96);
+  gap: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  background: var(--surface);
 }
 
 .public-brand {
   color: var(--text);
-  font-size: 1.05rem;
-  font-weight: 800;
   text-decoration: none;
 }
 
@@ -521,9 +519,9 @@ h3 {
 .public-content {
   display: grid;
   gap: 30px;
-  width: min(960px, calc(100% - 32px));
+  width: min(960px, 100%);
   margin: 0 auto;
-  padding: 28px 0 56px;
+  padding: 10px 0 56px;
 }
 
 .admin-help-content {
@@ -641,9 +639,9 @@ h3 {
 .legal-content {
   display: grid;
   gap: 22px;
-  width: min(900px, calc(100% - 32px));
+  width: min(900px, 100%);
   margin: 0 auto;
-  padding: 28px 0 56px;
+  padding: 10px 0 56px;
 }
 
 .legal-hero,
@@ -736,6 +734,27 @@ h3 {
   color: var(--text);
   font-size: 0.9rem;
   font-weight: 700;
+}
+
+.required-mark {
+  margin-left: 3px;
+  color: #f87171;
+  font-size: 0.72em;
+  line-height: 0;
+  vertical-align: super;
+}
+
+.required-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.required-note .required-mark {
+  margin-right: 4px;
+  margin-left: 0;
 }
 
 .field input,
@@ -965,7 +984,7 @@ h3 {
 
 .action-column .row-actions {
   flex-wrap: nowrap;
-  justify-content: flex-end;
+  justify-content: flex-start;
   width: 100%;
 }
 
@@ -1196,12 +1215,12 @@ th {
 
 .status-segment-button.active.muted {
   color: #ffffff;
-  background: #475569;
+  background: #1d4ed8;
 }
 
 .status-segment-button.active.muted:not(:disabled):hover,
 .status-segment-button.active.muted:not(:disabled):focus-visible {
-  background: #334155;
+  background: #1e40af;
 }
 
 .status-segment-button:disabled {
@@ -1351,6 +1370,12 @@ th {
   display: grid;
   grid-template-columns: minmax(0, 0.75fr) minmax(0, 1fr);
   gap: 10px;
+}
+
+.invite-complete-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
 }
 
 .complete-response-list {
@@ -1509,17 +1534,19 @@ th {
   }
 
   .public-page {
-    padding-top: 68px;
+    width: min(100% - 20px, 520px);
+    padding-top: 20px;
   }
 
   .public-header {
-    min-height: 60px;
-    padding: 10px;
+    align-items: center;
+    gap: 10px;
+    padding: 14px;
   }
 
   .public-content {
-    width: min(100% - 20px, 520px);
-    padding-top: 20px;
+    width: 100%;
+    padding-top: 2px;
   }
 
   .public-section-heading {
