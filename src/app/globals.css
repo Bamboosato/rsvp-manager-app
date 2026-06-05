@@ -659,6 +659,293 @@ h3 {
   gap: 16px;
 }
 
+.help-guide-list {
+  gap: 24px;
+}
+
+.help-guide-card {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(320px, 1.1fr);
+  gap: 22px;
+  align-items: start;
+  border-top: 1px solid var(--border);
+  padding-top: 20px;
+}
+
+.help-guide-copy {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.help-guide-copy h3,
+.help-reference-item h3,
+.help-trouble-item h3 {
+  margin: 0;
+}
+
+.help-guide-copy p,
+.help-reference-item p,
+.help-trouble-item p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.help-step-badge {
+  width: fit-content;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 10px;
+  background: var(--surface);
+  color: var(--accent);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.help-point-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 20px;
+  color: var(--text);
+  line-height: 1.65;
+}
+
+.help-reference-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.help-reference-item,
+.help-trouble-item {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 14px;
+  background: var(--surface);
+}
+
+.help-message-sample {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 16px;
+  background: var(--surface);
+  color: var(--text);
+  line-height: 1.8;
+}
+
+.help-message-sample p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.help-trouble-list {
+  display: grid;
+  gap: 12px;
+}
+
+.help-screen-mock {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  background: #f8fafc;
+  color: var(--text);
+  overflow: hidden;
+}
+
+.help-mock-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.help-mock-header strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 1.25rem;
+}
+
+.help-mock-logo,
+.help-mock-back {
+  display: inline-grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  flex: 0 0 auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 900;
+  line-height: 1.05;
+  text-align: center;
+}
+
+.help-mock-back {
+  color: var(--accent);
+  font-size: 0.8rem;
+}
+
+.help-mock-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.help-mock-badges span,
+.help-mock-status {
+  border-radius: 999px;
+  padding: 4px 10px;
+  background: #e8f1ff;
+  color: var(--accent);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.help-mock-status.muted {
+  background: #475569;
+  color: #fff;
+}
+
+.help-mock-table {
+  display: grid;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.help-mock-row {
+  display: grid;
+  grid-template-columns: minmax(90px, 1.1fr) minmax(90px, 1fr) minmax(76px, 0.8fr);
+  gap: 8px;
+  align-items: center;
+  border-top: 1px solid var(--border);
+  padding: 10px;
+  font-size: 0.9rem;
+}
+
+.help-mock-row:first-child {
+  border-top: 0;
+}
+
+.help-mock-head {
+  background: #eef2f6;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.help-mock-row strong,
+.help-mock-row span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.help-mock-share {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.help-mock-share span {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.help-mock-share button,
+.help-mock-attendance button {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--text);
+  font: inherit;
+  font-weight: 800;
+}
+
+.help-mock-share button {
+  min-height: 40px;
+  padding: 0 14px;
+}
+
+.help-mock-share small {
+  grid-column: 2;
+  color: #047857;
+  font-weight: 800;
+}
+
+.help-mock-message {
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px;
+  background: #fff;
+}
+
+.help-mock-message span {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.help-screen-mock-phone {
+  width: min(100%, 360px);
+  justify-self: center;
+  background: #fff;
+}
+
+.help-screen-mock-phone h3 {
+  margin: 0;
+  font-size: 1.45rem;
+}
+
+.help-mock-subtitle {
+  color: var(--muted);
+}
+
+.help-mock-invite-card {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--surface);
+}
+
+.help-mock-attendance {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.help-mock-attendance button {
+  min-height: 48px;
+  font-size: 1.35rem;
+}
+
+.help-mock-attendance button.selected {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.help-mock-comment {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  background: #fff;
+  color: var(--muted);
+}
+
 .public-note-list {
   display: grid;
   gap: 10px;
@@ -1641,6 +1928,38 @@ th {
   .help-guide-row {
     grid-template-columns: 1fr;
     gap: 8px;
+  }
+
+  .help-guide-card {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .help-reference-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .help-screen-mock {
+    padding: 12px;
+  }
+
+  .help-mock-header strong {
+    font-size: 1.05rem;
+  }
+
+  .help-mock-row {
+    grid-template-columns: minmax(82px, 1fr) minmax(82px, 1fr) minmax(68px, 0.8fr);
+    gap: 6px;
+    padding: 9px;
+    font-size: 0.82rem;
+  }
+
+  .help-mock-share {
+    grid-template-columns: 1fr;
+  }
+
+  .help-mock-share small {
+    grid-column: 1;
   }
 
   .public-help-link {
