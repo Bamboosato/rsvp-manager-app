@@ -18,6 +18,7 @@ npm install
 
 Create `.env.local` from `.env.example` and set the Firebase Web App values.
 Invite APIs also require Firebase Admin SDK server credentials.
+The canonical production URL is `https://rsvphub.bamboosato.com`.
 
 ```bash
 cp .env.example .env.local
@@ -32,6 +33,7 @@ Required values:
 - `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
 - `NEXT_PUBLIC_FIREBASE_APP_ID`
 - `NEXT_PUBLIC_FIREBASE_VAPID_KEY`
+- `NEXT_PUBLIC_APP_BASE_URL`
 - `FIREBASE_ADMIN_PROJECT_ID`
 - `FIREBASE_ADMIN_CLIENT_EMAIL`
 - `FIREBASE_ADMIN_PRIVATE_KEY`
@@ -39,6 +41,17 @@ Required values:
 
 `NEXT_PUBLIC_FIREBASE_VAPID_KEY` is the Web Push certificate public key from
 Firebase Console > Cloud Messaging.
+Set `NEXT_PUBLIC_APP_BASE_URL` to `https://rsvphub.bamboosato.com` in production
+so shared invite URLs and notification links use the custom domain. Leave it
+blank for local development to use the current browser origin.
+
+Production domain checklist:
+
+- Vercel project domain: `rsvphub.bamboosato.com`
+- Vercel Production environment variable:
+  `NEXT_PUBLIC_APP_BASE_URL=https://rsvphub.bamboosato.com`
+- Firebase Authentication Authorized domains:
+  `rsvphub.bamboosato.com`
 
 ## Scripts
 

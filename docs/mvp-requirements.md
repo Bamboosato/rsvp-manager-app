@@ -11,6 +11,7 @@ MVPでは、イベント参加者の出欠調整に必要な最小機能を優�
 ## 2. 技術スタック
 
 - ホスティング: Vercel
+- 本番URL: `https://rsvphub.bamboosato.com`
 - 認証: Firebase Authentication
 - データベース: Firestore
 - 通知: Firebase Cloud Messagingを想定
@@ -199,6 +200,8 @@ MVPでは、イベント参加者の出欠調整に必要な最小機能を優�
 - システムから招待者へ自動送信しない。
 - URLには推測困難なランダムtokenを使用する。
 - 例: `/invite/{publicToken}`
+- 本番環境では `https://rsvphub.bamboosato.com/invite/{publicToken}` を正規の配信用URLとする。
+- URLコピー時は、設定済みの本番ベースURLを優先し、ローカル開発時は現在のブラウザoriginを使用する。
 - 管理画面ではURL表示とコピーボタンを提供する。
 - MVPではURL再発行は対象外とする。
 

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
 import { ConfirmDialog } from "@/features/ui/ConfirmDialog";
+import { buildAppUrl } from "@/lib/appUrl";
 import { getFirebaseClientFirestore } from "@/lib/firebase/client";
 import { AdminAccountMenu } from "./AdminAccountMenu";
 import { AdminSectionMetrics } from "./AdminSectionMetrics";
@@ -322,5 +323,5 @@ function AdminPlansDashboard() {
 }
 
 function buildInviteUrl(publicToken: string) {
-  return `${window.location.origin}/invite/${publicToken}`;
+  return buildAppUrl(`/invite/${publicToken}`);
 }

@@ -5,6 +5,7 @@ import {
   getFirebaseAdminFirestore,
   getFirebaseAdminMessaging
 } from "@/lib/firebase/admin";
+import { buildAppUrl, getAppBaseUrl } from "@/lib/appUrl";
 
 const invalidTokenErrorCodes = new Set([
   "messaging/invalid-registration-token",
@@ -82,12 +83,13 @@ export async function sendInviteResponseNotification({
     return;
   }
 
-  const url = `${origin}/admin/plans/${encodeURIComponent(planId)}`;
-  const iconUrl = `${origin}/icons/rsvp-hub-icon-192.png`;
+  const appBaseUrl = getAppBaseUrl(origin);
+  const url = buildAppUrl(`/admin/plans/${encodeURIComponent(planId)}`, origin);
+  const iconUrl = buildAppUrl("/icons/rsvp-hub-icon-192.png", origin);
   const body = `プラン${planName}を${nickname}さんが更新しました。`;
   const messaging = getFirebaseAdminMessaging();
   const webpush = {
-    ...(origin.startsWith("https://")
+    ...(appBaseUrl.startsWith("https://")
       ? {
           fcmOptions: {
             link: url
