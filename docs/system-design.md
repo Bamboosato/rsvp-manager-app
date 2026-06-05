@@ -18,6 +18,7 @@ MVPでは、以下を最優先で守る。
 ## 2. 前提
 
 - ホスティングはVercelとする。
+- 本番URLは `https://rsvphub.bamboosato.com` とする。
 - 認証はFirebase Authenticationを使用する。
 - データ保存はFirestoreを使用する。
 - Push通知はFirebase Cloud Messagingを使用する。
@@ -50,6 +51,13 @@ flowchart LR
 | Vercel API層 | PIN照合、アクセスコード照合、招待者回答保存、通知送信、監査ログ記録 |
 | Firestore | プラン、イベント、招待者、回答、通知token、監査ログの永続化 |
 | FCM | イベント管理者への回答更新通知 |
+
+### 3.2 正規URL
+
+- 本番環境では `NEXT_PUBLIC_APP_BASE_URL=https://rsvphub.bamboosato.com` を設定する。
+- 管理画面のURLコピー、招待者向け配信用URL、Push通知の遷移先URLは、設定済みの正規URLを優先して生成する。
+- `NEXT_PUBLIC_APP_BASE_URL` が未設定の場合は、ローカル開発向けに現在のリクエストoriginまたはブラウザoriginを使用する。
+- Firebase Authentication の Authorized domains に `rsvphub.bamboosato.com` を追加する。
 
 ## 4. アプリケーション境界
 

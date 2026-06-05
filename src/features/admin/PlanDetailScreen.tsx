@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
 import { ConfirmDialog } from "@/features/ui/ConfirmDialog";
+import { buildAppUrl } from "@/lib/appUrl";
 import { getFirebaseClientFirestore } from "@/lib/firebase/client";
 import { AdminAccountMenu } from "./AdminAccountMenu";
 import { AdminSectionMetrics } from "./AdminSectionMetrics";
@@ -544,7 +545,7 @@ function getEventTitle(event: AdminEvent) {
 }
 
 async function copyInviteLinkToClipboard(plan: AdminPlan) {
-  const inviteUrl = `${window.location.origin}/invite/${plan.publicToken}`;
+  const inviteUrl = buildAppUrl(`/invite/${plan.publicToken}`);
   const plainText = `${plan.name}\n${inviteUrl}`;
 
   if (typeof ClipboardItem !== "undefined" && typeof navigator.clipboard.write === "function") {
