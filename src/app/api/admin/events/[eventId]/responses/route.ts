@@ -11,6 +11,7 @@ import {
   getFirestoreDocument,
   hashSecret,
   normalizeNickname,
+  patchFirestoreDocument,
   runFirestoreQuery,
   toFirestoreNullableString,
   toFirestoreString,
@@ -105,15 +106,16 @@ export async function GET(request: NextRequest, context: RouteContext) {
   const responseDocuments = responseRows
     .map((row) => row.document)
     .filter((document): document is FirestoreDocument => Boolean(document));
+  const activeResponseDocuments = responseDocuments.filter(isActiveResponseDocument);
   const guestIds = Array.from(
-    new Set(responseDocuments.map((document) => firestoreString(document.fields, "guestId")))
+    new Set(activeResponseDocuments.map((document) => firestoreString(document.fields, "guestId")))
   ).filter(Boolean);
   const guestMap = await getGuestMap({
     idToken: authUser.idToken,
     guestIds,
     ownerUid: authUser.uid
   });
-  const responses = responseDocuments.map((document) => {
+  const responses = activeResponseDocuments.map((document) => {
     const fields = document.fields;
     const guestId = firestoreString(fields, "guestId");
     const guest = guestMap.get(guestId);
@@ -210,6 +212,61 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
   const responseId = `${eventId}_${guestId}`;
   const now = new Date().toISOString();
+  const existingResponse = await getFirestoreDocument({
+    idToken: authUser.idToken,
+    collection: "responses",
+    documentId: responseId
+  });
+
+  if (existingResponse) {
+    if (
+      firestoreString(existingResponse.fields, "ownerUid") !== authUser.uid ||
+      firestoreString(existingResponse.fields, "eventId") !== eventId ||
+      firestoreString(existingResponse.fields, "guestId") !== guestId
+    ) {
+      return NextResponse.json(
+        { message: "この招待者の回答は既に登録されています。修正から更新してください。" },
+        { status: 409 }
+      );
+    }
+
+    if (isActiveResponseDocument(existingResponse)) {
+      return NextResponse.json(
+        { message: "この招待者の回答は既に登録されています。修正から更新してください。" },
+        { status: 409 }
+      );
+    }
+
+    await patchFirestoreDocument({
+      idToken: authUser.idToken,
+      collection: "responses",
+      documentId: responseId,
+      fields: createResponseUpdateFields({
+        attendanceStatus: validation.attendanceStatus,
+        comment: validation.comment,
+        lastUpdatedByUid: authUser.uid,
+        now,
+        isActive: true
+      })
+    });
+    await createFirestoreDocument({
+      idToken: authUser.idToken,
+      collection: "auditLogs",
+      documentId: randomUUID(),
+      fields: createAuditLogFields({
+        ownerUid: authUser.uid,
+        actorUid: authUser.uid,
+        action: "admin_response_restore",
+        targetType: "response",
+        targetId: responseId,
+        summary: `${validation.nickname} の回答を代理追加`,
+        now
+      })
+    });
+
+    return NextResponse.json({ responseId }, { status: 201 });
+  }
+
   try {
     await createFirestoreDocument({
       idToken: authUser.idToken,
@@ -449,6 +506,7 @@ function createResponseFields({
     eventId: toFirestoreString(eventId),
     guestId: toFirestoreString(guestId),
     ownerUid: toFirestoreString(ownerUid),
+    isActive: { booleanValue: true },
     attendanceStatus: toFirestoreString(attendanceStatus),
     comment: toFirestoreNullableString(comment || null),
     answeredAt: toFirestoreTimestamp(now),
@@ -457,6 +515,34 @@ function createResponseFields({
     createdAt: toFirestoreTimestamp(now),
     updatedAt: toFirestoreTimestamp(now)
   };
+}
+
+function createResponseUpdateFields({
+  attendanceStatus,
+  comment,
+  lastUpdatedByUid,
+  now,
+  isActive
+}: {
+  attendanceStatus: string;
+  comment: string;
+  lastUpdatedByUid: string;
+  now: string;
+  isActive: boolean;
+}): Record<string, FirestoreFieldValue> {
+  return {
+    isActive: { booleanValue: isActive },
+    attendanceStatus: toFirestoreString(attendanceStatus),
+    comment: toFirestoreNullableString(comment || null),
+    answeredAt: toFirestoreTimestamp(now),
+    lastUpdatedBy: toFirestoreString("admin"),
+    lastUpdatedByUid: toFirestoreString(lastUpdatedByUid),
+    updatedAt: toFirestoreTimestamp(now)
+  };
+}
+
+function isActiveResponseDocument(document: FirestoreDocument) {
+  return document.fields?.isActive?.booleanValue !== false;
 }
 
 function countResponses(

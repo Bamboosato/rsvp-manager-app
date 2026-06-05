@@ -184,7 +184,9 @@ export async function listGuestResponses({
     .orderBy("eventId", "asc")
     .get();
 
-  return snapshot.docs.map((document) => mapResponse(document.id, document.data()));
+  return snapshot.docs
+    .filter((document) => document.data().isActive !== false)
+    .map((document) => mapResponse(document.id, document.data()));
 }
 
 export async function saveInviteResponses({
@@ -220,6 +222,7 @@ export async function saveInviteResponses({
       const responseRef = db.collection("responses").doc(responseId);
       const existingResponse = await responseRef.get();
       const updateFields = {
+        isActive: true,
         attendanceStatus: response.attendanceStatus,
         comment: response.comment || null,
         answeredAt: now,

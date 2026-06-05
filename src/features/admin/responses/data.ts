@@ -16,6 +16,7 @@ export type AdminResponse = {
   planId: string;
   eventId: string;
   guestId: string;
+  isActive: boolean;
   attendanceStatus: AttendanceStatus;
 };
 
@@ -47,7 +48,7 @@ export function subscribePlanResponses({
   return onSnapshot(
     responsesQuery,
     (snapshot) => {
-      onResponses(snapshot.docs.map(mapResponseSnapshot));
+      onResponses(snapshot.docs.map(mapResponseSnapshot).filter((response) => response.isActive));
     },
     (error) => {
       onError(error);
@@ -80,6 +81,7 @@ function mapResponseSnapshot(
     planId: String(data.planId ?? ""),
     eventId: String(data.eventId ?? ""),
     guestId: String(data.guestId ?? ""),
+    isActive: data.isActive !== false,
     attendanceStatus:
       data.attendanceStatus === "maybe"
         ? "maybe"

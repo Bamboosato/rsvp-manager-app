@@ -270,14 +270,17 @@ function PlanDetail({ planId }: { planId: string }) {
 
   return (
     <main className="app-shell">
-      <header className="top-bar">
+      <header className="top-bar sticky-top-bar">
         <div className="page-heading">
           <div className="title-row">
             <Link className="back-link" data-tooltip="マイプランへ戻る" href="/admin/plans">
               <span>←</span>
               <span>戻る</span>
             </Link>
-            <h1>{plan.name}</h1>
+            <div className="title-stack">
+              <span className="title-label">プラン</span>
+              <h1>{plan.name}</h1>
+            </div>
           </div>
         </div>
         <AdminAccountMenu user={user} onSignOut={signOut} />

@@ -95,7 +95,7 @@ button {
 .app-shell {
   width: min(1180px, calc(100% - 32px));
   margin: 0 auto;
-  padding: 32px 0 48px;
+  padding: 16px 0 48px;
 }
 
 .top-bar,
@@ -106,12 +106,22 @@ button {
   gap: 16px;
 }
 
+.section-heading > .section-actions {
+  justify-content: flex-end;
+}
+
 .top-bar {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   margin-bottom: 18px;
   padding: 14px 16px;
-  background: var(--surface);
+  background: linear-gradient(135deg, #ffffff 0%, #fbfdff 58%, #eef5ff 100%);
+}
+
+.sticky-top-bar {
+  position: sticky;
+  top: 16px;
+  z-index: 30;
 }
 
 .page-heading {
@@ -128,6 +138,23 @@ button {
 .title-row h1 {
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+.title-stack {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.title-stack h1 {
+  line-height: 1.08;
+}
+
+.title-label {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .header-mark,
@@ -149,6 +176,11 @@ button {
   text-align: center;
   text-decoration: none;
   white-space: nowrap;
+}
+
+.header-mark,
+.sticky-top-bar .back-link {
+  color: var(--accent);
 }
 
 .header-mark:hover,
@@ -491,7 +523,7 @@ h3 {
 .public-page {
   width: min(1180px, calc(100% - 32px));
   margin: 0 auto;
-  padding: 32px 0 48px;
+  padding: 16px 0 48px;
 }
 
 .public-header {
@@ -507,7 +539,7 @@ h3 {
 }
 
 .public-brand {
-  color: var(--text);
+  color: var(--accent);
   text-decoration: none;
 }
 
@@ -936,6 +968,7 @@ h3 {
 }
 
 .row-actions,
+.section-actions,
 .form-actions {
   display: flex;
   flex-wrap: wrap;
@@ -1356,6 +1389,26 @@ th {
   gap: 12px;
 }
 
+.invite-event-date {
+  margin-top: 0;
+  margin-bottom: 4px;
+  color: var(--accent);
+  font-size: 1.22rem;
+  font-weight: 800;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.invite-event-name {
+  margin-top: 0;
+  margin-bottom: 2px;
+  color: var(--text);
+  font-size: 0.98rem;
+  font-weight: 700;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
 .invite-choice-row {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1382,6 +1435,14 @@ th {
   display: grid;
   gap: 12px;
   margin-top: 16px;
+}
+
+.complete-plan-summary {
+  margin-top: 14px;
+}
+
+.complete-plan-summary h1 {
+  margin-bottom: 2px;
 }
 
 .complete-response-row {
@@ -1452,7 +1513,7 @@ th {
 @media (max-width: 760px) {
   .app-shell {
     width: min(100% - 20px, 520px);
-    padding-top: 20px;
+    padding-top: 10px;
   }
 
   .top-bar,
@@ -1471,6 +1532,10 @@ th {
     align-items: start;
     gap: 10px;
     width: 100%;
+  }
+
+  .sticky-top-bar {
+    top: 10px;
   }
 
   .top-bar > :first-child {
@@ -1550,7 +1615,7 @@ th {
 
   .public-page {
     width: min(100% - 20px, 520px);
-    padding-top: 20px;
+    padding-top: 10px;
   }
 
   .public-header {
