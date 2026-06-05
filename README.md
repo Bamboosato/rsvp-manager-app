@@ -70,6 +70,32 @@ Firestore Rules and indexes are managed in this repository.
 npx firebase deploy --only firestore:rules,firestore:indexes
 ```
 
+## Maintenance
+
+Developer-only Firestore cleanup commands are available for small, explicit
+maintenance tasks. The plan cleanup command is dry-run by default.
+
+```bash
+npm run maintenance:delete-plan -- --planId <planId>
+```
+
+To physically delete matching documents:
+
+```bash
+npm run maintenance:delete-plan -- --planId <planId> --execute
+```
+
+The command deletes related documents in this order:
+
+1. `responses`
+2. `guests`
+3. `events`
+4. `plans`
+
+`auditLogs` are reported but kept by default. Add `--include-audit-logs` only
+when cleaning disposable test data. Active plans require `--force-active` when
+using `--execute`.
+
 ## Documents
 
 - `docs/mvp-requirements.md`
