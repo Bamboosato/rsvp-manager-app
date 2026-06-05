@@ -161,13 +161,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ message: "イベントを表示できません。" }, { status: 404 });
   }
 
-  if (event.status === "closed") {
-    return NextResponse.json(
-      { message: "締切済みイベントには代理回答を追加できません。" },
-      { status: 409 }
-    );
-  }
-
   const body = (await request.json().catch(() => null)) as SaveResponseRequest | null;
   const validation = validateSaveResponseRequest(body);
 

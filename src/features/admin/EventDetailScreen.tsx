@@ -384,7 +384,6 @@ function EventDetail({ eventId }: { eventId: string }) {
 
   const eventTitle = detail.event.name || "イベント名未設定";
   const planHref = `/admin/plans/${detail.event.planId}`;
-  const isEventClosed = detail.event.status === "closed";
 
   return (
     <main className="app-shell">
@@ -475,12 +474,8 @@ function EventDetail({ eventId }: { eventId: string }) {
             </span>
             <button
               className="primary-button"
-              data-tooltip={
-                isEventClosed
-                  ? "締切済みイベントには代理回答を追加できません"
-                  : "幹事さんが招待者の回答を追加"
-              }
-              disabled={isSubmitting || isEventClosed}
+              data-tooltip="幹事さんが招待者の回答を追加"
+              disabled={isSubmitting}
               onClick={() => {
                 setError("");
                 setNotice("");
@@ -492,12 +487,6 @@ function EventDetail({ eventId }: { eventId: string }) {
             </button>
           </div>
         </div>
-
-        {isEventClosed ? (
-          <p className="notice-message top-message">
-            このイベントは締切済みのため、代理回答は追加できません。
-          </p>
-        ) : null}
 
         {detail.responses.length === 0 ? (
           <p className="empty-state">まだ回答はありません。</p>
