@@ -1386,20 +1386,35 @@ th {
 
 .complete-response-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) minmax(32px, auto);
+  align-items: start;
+  gap: 16px;
   border-top: 1px solid var(--border);
   padding-top: 12px;
 }
 
-.complete-response-value {
-  display: grid;
-  justify-items: end;
-  gap: 4px;
-  min-width: 88px;
+.complete-response-main {
+  min-width: 0;
 }
 
-.complete-response-value strong {
+.complete-response-main h3,
+.complete-response-main p {
+  overflow-wrap: anywhere;
+}
+
+.complete-response-comment {
+  margin: 6px 0;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.complete-response-status {
+  display: flex;
+  justify-content: flex-end;
+  min-width: 32px;
+}
+
+.complete-response-status strong {
   font-size: 1.35rem;
   line-height: 1;
 }
@@ -1621,8 +1636,8 @@ th {
     display: grid;
   }
 
-  .complete-response-value {
-    justify-items: start;
+  .complete-response-status {
+    justify-content: flex-start;
   }
 
   .modal-backdrop {

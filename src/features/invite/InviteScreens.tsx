@@ -618,22 +618,26 @@ export function InviteCompleteScreen({ publicToken }: { publicToken: string }) {
       <section className="panel invite-panel">
         <h2>入力内容</h2>
         <div className="complete-response-list">
-          {detail.events.map((inviteEvent) => (
-            <article className="complete-response-row" key={inviteEvent.id}>
-              <div>
-                <p className="event-date">
-                  {formatEventDate(inviteEvent.eventDate)}{" "}
-                  {formatEventTime(inviteEvent.timeSlot, inviteEvent.timeDetail)}
-                </p>
-                <h3>{inviteEvent.name || inviteEvent.place}</h3>
-                <p className="muted-text">{inviteEvent.place}</p>
-              </div>
-              <div className="complete-response-value">
-                <strong>{getAttendanceLabel(inviteEvent.response?.attendanceStatus)}</strong>
-                <span>{inviteEvent.response?.comment || "-"}</span>
-              </div>
-            </article>
-          ))}
+          {detail.events.map((inviteEvent) => {
+            const comment = inviteEvent.response?.comment.trim();
+
+            return (
+              <article className="complete-response-row" key={inviteEvent.id}>
+                <div className="complete-response-main">
+                  <p className="event-date">
+                    {formatEventDate(inviteEvent.eventDate)}{" "}
+                    {formatEventTime(inviteEvent.timeSlot, inviteEvent.timeDetail)}
+                  </p>
+                  <h3>{inviteEvent.name || inviteEvent.place}</h3>
+                  {comment ? <p className="complete-response-comment">{comment}</p> : null}
+                  <p className="muted-text">{inviteEvent.place}</p>
+                </div>
+                <div className="complete-response-status">
+                  <strong>{getAttendanceLabel(inviteEvent.response?.attendanceStatus)}</strong>
+                </div>
+              </article>
+            );
+          })}
         </div>
       </section>
     </main>
