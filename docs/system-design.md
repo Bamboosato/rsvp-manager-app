@@ -131,7 +131,7 @@ flowchart LR
 | `/api/invite/{publicToken}/responses` | GET | 招待者セッション | 自分の回答取得 |
 | `/api/invite/{publicToken}/responses` | POST | 招待者セッション | 自分の回答保存 |
 
-`GET /api/invite/{publicToken}/responses` は、受付中イベントと、招待者本人の回答が存在する締切済イベントのみを返す。締切済かつ本人回答が存在しないイベントは返さない。
+`GET /api/invite/{publicToken}/responses` は、共有トークンに保存された `eventIds` に含まれる有効イベントを返す。URL作成後に締切済みへ変更されたイベントも返すが、招待者による更新は不可とする。削除/無効化済みイベントは返さない。
 
 ### 6.3 招待者セッション
 
@@ -249,7 +249,34 @@ MVPでは、アプリ管理者がFirebase ConsoleでAuthユーザーを作成す
 - `eventId + guestId` は一意に扱う。
 - 招待者保存では、対象イベントが有効かつ受付中であることをAPI層で再検証する。
 
-### 7.6 notificationTokens
+### 7.6 inviteShareTokens
+
+| フィールド | 型 | 必須 | 内容 |
+| --- | --- | --- | --- |
+| token | string | yes | 共有トークン。ドキュメントIDと同じ値 |
+| publicToken | string | yes | URLパス上のプラン識別token |
+| planId | string | yes | 対象プランID |
+| ownerUid | string | yes | プラン所有者UID |
+| eventIds | string[] | yes | URL発行時に固定した表示対象イベントID |
+| isActive | boolean | yes | 有効状態 |
+| createdAt | timestamp | yes | 作成日時 |
+| updatedAt | timestamp | yes | 更新日時 |
+| revokedAt | timestamp/null | no | 無効化日時 |
+| revokedReason | string/null | no | 無効化理由 |
+
+制約:
+
+- 招待者向けURLは `/invite/{publicToken}?share={token}` 形式とする。
+- `share` パラメータなし、存在しないトークン、無効化済みトークン、対象プランと一致しないトークンはエラー扱いにする。
+- トークン作成時は、指定イベントが対象プラン配下、有効、締切済みではないことをAPI層で再検証する。
+- トークン作成後にイベントの並び順やステータスが変わっても、`eventIds` に保存された対象イベント集合は変更しない。
+- トークン作成後に対象イベントが締切済みになった場合、招待者回答画面には表示するが、保存APIでは更新を拒否する。
+- トークン作成後に対象イベントが削除/無効化された場合、招待者回答画面には表示しない。
+- 招待者回答保存時は、送信された `eventId` が共有トークンの `eventIds` に含まれることをAPI層で再検証する。
+- プラン削除時は、対象プランに紐づく有効な共有トークンを `isActive=false` に更新する。
+- `inviteShareTokens` はサーバーAPI専用データとし、Firestore Security Rulesではクライアント直接アクセスを許可しない。
+
+### 7.7 notificationTokens
 
 | フィールド | 型 | 必須 | 内容 |
 | --- | --- | --- | --- |
@@ -264,7 +291,7 @@ MVPでは、アプリ管理者がFirebase ConsoleでAuthユーザーを作成す
 
 `tokenId` はFCM tokenをSHA-256でハッシュ化した値とし、token本文をドキュメントIDに直接使わない。送信時に無効tokenが検出された場合は `isActive=false` に更新する。
 
-### 7.7 auditLogs
+### 7.8 auditLogs
 
 | フィールド | 型 | 必須 | 内容 |
 | --- | --- | --- | --- |
@@ -297,6 +324,7 @@ Firestoreで必要になる主な検索条件:
 | guests | `ownerUid == currentUid`, `planId == planId` | `nicknameKey asc` |
 | responses | `ownerUid == currentUid`, `eventId == eventId` | `answeredAt desc` |
 | responses | `planId == planId`, `guestId == guestId` | `eventId asc` |
+| inviteShareTokens | `ownerUid == currentUid`, `planId == planId`, `isActive == true` | なし |
 | notificationTokens | `ownerUid == currentUid`, `isActive == true` | なし |
 | auditLogs | `ownerUid == currentUid`, `targetId == targetId` | `createdAt desc` |
 
@@ -329,6 +357,8 @@ Firestoreで必要になる主な検索条件:
 - 管理画面で配信用URLを表示、コピーするため、MVPでは `plans.publicToken` として保持する。
 - `publicToken` は `ownerUid` によるアクセス制御でイベント管理者本人だけが閲覧できるようにする。
 - 招待者向けAPIは `publicToken` から対象プランを特定する。
+- 招待者向けAPIは `share` パラメータから `inviteShareTokens` を特定し、対象プランと固定イベント集合を検証する。
+- `share` パラメータなしの `/invite/{publicToken}` は利用不可とする。
 - `publicToken` だけで回答編集を許可せず、アクセスコード、ニックネーム、PIN、招待者セッションで追加確認する。
 
 ## 10. 主要処理フロー
@@ -375,12 +405,12 @@ sequenceDiagram
   participant DB as Firestore
   participant FCM as FCM
   G->>UI: 配信用URLアクセス
-  UI->>API: publicToken確認
-  API->>DB: plan取得
+  UI->>API: publicToken/share確認
+  API->>DB: plan/shareToken取得
   API-->>UI: 公開情報返却
   G->>UI: ニックネーム/PIN/回答入力
   UI->>API: entry + responses保存
-  API->>DB: plan/event状態再検証
+  API->>DB: plan/shareToken/event状態再検証
   API->>DB: guest作成または照合
   API->>DB: responses保存
   API->>FCM: 管理者へ通知

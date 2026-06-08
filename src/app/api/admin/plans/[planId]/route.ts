@@ -10,6 +10,7 @@ import {
   toFirestoreTimestamp,
   type FirestoreFieldValue
 } from "@/lib/firebase/serverApi";
+import { disablePlanAndRevokeInviteShareTokens } from "@/lib/invite/shareTokens";
 
 export const runtime = "nodejs";
 
@@ -77,6 +78,35 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   }
 
   return NextResponse.json({ ok: true });
+}
+
+export async function DELETE(request: NextRequest, context: RouteContext) {
+  const authUser = await authenticateFirebaseRequest(request);
+
+  if (!authUser) {
+    return NextResponse.json({ message: "認証情報がありません。" }, { status: 401 });
+  }
+
+  const { planId } = await context.params;
+
+  try {
+    const result = await disablePlanAndRevokeInviteShareTokens({
+      ownerUid: authUser.uid,
+      planId
+    });
+
+    if (!result.ok) {
+      return NextResponse.json({ message: "プランを表示できません。" }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      ok: true,
+      revokedTokenCount: result.revokedTokenCount
+    });
+  } catch (error) {
+    console.error("Failed to disable plan.", error);
+    return NextResponse.json({ message: "プランの削除に失敗しました。" }, { status: 500 });
+  }
 }
 
 function validateUpdatePlanRequest(body: UpdatePlanRequest | null):

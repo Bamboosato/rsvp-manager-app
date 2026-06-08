@@ -409,6 +409,11 @@ h3 {
   background: var(--surface);
 }
 
+.invite-share-trigger-button {
+  border-color: #9bb7e8;
+  color: var(--accent);
+}
+
 .secondary-button:not(:disabled):hover,
 .secondary-button:not(:disabled):focus-visible {
   border-color: var(--accent);
@@ -1797,6 +1802,68 @@ th {
   line-height: 1.7;
 }
 
+.invite-share-dialog {
+  display: grid;
+  gap: 16px;
+}
+
+.invite-share-dialog-description {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+.invite-share-event-list {
+  display: grid;
+  gap: 8px;
+}
+
+.invite-share-event-row {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.invite-share-event-row input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.invite-share-event-main {
+  display: grid;
+  grid-template-columns: minmax(96px, auto) minmax(72px, auto) minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.invite-share-event-date,
+.invite-share-event-time {
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.invite-share-event-name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 @media (max-width: 760px) {
   .app-shell {
     width: min(100% - 20px, 520px);
@@ -2031,5 +2098,14 @@ th {
 
   .modal-panel {
     max-height: 88vh;
+  }
+
+  .invite-share-event-main {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .invite-share-event-name {
+    white-space: normal;
   }
 }
