@@ -5,19 +5,20 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
 import { ConfirmDialog } from "@/features/ui/ConfirmDialog";
-import { buildAppUrl } from "@/lib/appUrl";
 import { getFirebaseClientFirestore } from "@/lib/firebase/client";
 import { AdminAccountMenu } from "./AdminAccountMenu";
 import { AdminSectionMetrics } from "./AdminSectionMetrics";
+import { copyPlainTextToClipboard } from "./clipboard";
 import { subscribeOwnerEvents, type AdminEvent } from "./events/data";
+import { InviteShareDialog } from "./InviteShareDialog";
 import {
-  disablePlan,
   ensureEventAdminProfile,
   formatDateTime,
   formatYearMonth,
   subscribeOwnerPlans,
   type AdminPlan
 } from "./plans/data";
+import { createInviteShareUrl } from "./inviteShareLinks";
 
 const maxActivePlans = 3;
 
@@ -38,6 +39,10 @@ function AdminPlansDashboard() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [copiedPlanId, setCopiedPlanId] = useState<string | null>(null);
+  const [copyingPlanId, setCopyingPlanId] = useState<string | null>(null);
+  const [inviteShareTargetPlan, setInviteShareTargetPlan] = useState<AdminPlan | null>(null);
+  const [selectedInviteShareEventIds, setSelectedInviteShareEventIds] = useState<string[]>([]);
+  const [inviteShareDialogError, setInviteShareDialogError] = useState("");
   const [deletingPlanId, setDeletingPlanId] = useState<string | null>(null);
   const [deleteTargetPlan, setDeleteTargetPlan] = useState<AdminPlan | null>(null);
   const copyFeedbackTimerRef = useRef<number | null>(null);
@@ -109,16 +114,68 @@ function AdminPlansDashboard() {
     0
   );
 
-  async function handleCopyInviteUrl(plan: AdminPlan) {
+  function handleOpenInviteShareDialog(plan: AdminPlan) {
     setError("");
     setNotice("");
+    setInviteShareDialogError("");
+
+    const shareableEvents = getShareableEvents(plan.id, events);
+    setSelectedInviteShareEventIds(shareableEvents.map((event) => event.id));
+    setInviteShareTargetPlan(plan);
+  }
+
+  async function handleCopyInviteUrl() {
+    setInviteShareDialogError("");
+
+    if (!user || !inviteShareTargetPlan) {
+      setInviteShareDialogError("ログイン状態を確認できません。再度ログインしてください。");
+      return;
+    }
+
+    const targetPlan = inviteShareTargetPlan;
+    const shareableEvents = getShareableEvents(targetPlan.id, events);
+    const shareableEventIdSet = new Set(shareableEvents.map((event) => event.id));
+    const selectedEventIds = selectedInviteShareEventIds.filter((eventId) =>
+      shareableEventIdSet.has(eventId)
+    );
+
+    if (selectedEventIds.length === 0) {
+      setInviteShareDialogError("配信用URLに含めるイベントを選択してください。");
+      return;
+    }
+
+    setCopyingPlanId(targetPlan.id);
 
     try {
-      await navigator.clipboard.writeText(buildInviteUrl(plan.publicToken));
-      showCopyFeedback(plan.id);
-    } catch {
-      setError("URLコピーに失敗しました。ブラウザの設定を確認してください。");
+      const inviteUrl = await createInviteShareUrl({
+        user,
+        plan: targetPlan,
+        eventIds: selectedEventIds
+      });
+      await copyPlainTextToClipboard(inviteUrl);
+      setInviteShareTargetPlan(null);
+      showCopyFeedback(targetPlan.id);
+    } catch (copyError) {
+      setInviteShareDialogError(
+        copyError instanceof Error
+          ? copyError.message
+          : "URLコピーに失敗しました。ブラウザの設定を確認してください。"
+      );
+    } finally {
+      setCopyingPlanId(null);
     }
+  }
+
+  function toggleInviteShareEvent(eventId: string, checked: boolean) {
+    setSelectedInviteShareEventIds((currentEventIds) => {
+      if (checked) {
+        return currentEventIds.includes(eventId)
+          ? currentEventIds
+          : [...currentEventIds, eventId];
+      }
+
+      return currentEventIds.filter((currentEventId) => currentEventId !== eventId);
+    });
   }
 
   function showCopyFeedback(planId: string) {
@@ -141,14 +198,28 @@ function AdminPlansDashboard() {
   }
 
   async function handleDisablePlan() {
-    if (!deleteTargetPlan || !db) {
+    if (!deleteTargetPlan || !user) {
       return;
     }
 
     setDeletingPlanId(deleteTargetPlan.id);
 
     try {
-      await disablePlan(db, deleteTargetPlan.id);
+      const idToken = await user.getIdToken();
+      const response = await fetch(`/api/admin/plans/${deleteTargetPlan.id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${idToken}`
+        }
+      });
+      const result = (await response.json().catch(() => null)) as { message?: string } | null;
+
+      if (!response.ok) {
+        setError(result?.message ?? "プランの削除に失敗しました。");
+        setDeleteTargetPlan(null);
+        return;
+      }
+
       setNotice("プランを削除しました。");
       setDeleteTargetPlan(null);
     } catch {
@@ -248,64 +319,81 @@ function AdminPlansDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {activePlans.map((plan) => (
-                  <tr key={plan.id}>
-                    <td className="strong-cell">{plan.name}</td>
-                    <td>{formatYearMonth(plan.yearMonth)}</td>
-                    <td>{activeEventCounts[plan.id] ?? 0}</td>
-                    <td>{plan.hasPassword ? "設定済み" : "未設定"}</td>
-                    <td>
-                      <div className="copy-feedback-wrap">
-                        <button
-                          className="secondary-button compact-button"
-                          data-tooltip="招待者へ送る共有URLをコピー"
-                          onClick={() => handleCopyInviteUrl(plan)}
-                          type="button"
-                        >
-                          コピー
-                        </button>
-                        {copiedPlanId === plan.id ? (
-                          <span className="copy-feedback" role="status">
-                            コピーしました
-                          </span>
-                        ) : null}
-                      </div>
-                    </td>
-                    <td>{formatDateTime(plan.createdAt)}</td>
-                    <td className="action-column three-actions">
-                      <div className="row-actions">
-                        <Link
-                          className="secondary-button compact-button button-link"
-                          data-tooltip="このプランのイベント一覧を表示"
-                          href={`/admin/plans/${plan.id}`}
-                        >
-                          イベント
-                        </Link>
-                        <Link
-                          className="secondary-button compact-button button-link"
-                          data-tooltip="プラン名・年月・アクセスコードを編集"
-                          href={`/admin/plans/${plan.id}/edit`}
-                        >
-                          編集
-                        </Link>
-                        <button
-                          className="danger-button compact-button"
-                          data-tooltip="このプランを削除"
-                          disabled={deletingPlanId === plan.id}
-                          onClick={() => requestDisablePlan(plan)}
-                          type="button"
-                        >
-                          {deletingPlanId === plan.id ? "処理中" : "削除"}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {activePlans.map((plan) => {
+                  const isCopyingInviteUrl = copyingPlanId === plan.id;
+
+                  return (
+                    <tr key={plan.id}>
+                      <td className="strong-cell">{plan.name}</td>
+                      <td>{formatYearMonth(plan.yearMonth)}</td>
+                      <td>{activeEventCounts[plan.id] ?? 0}</td>
+                      <td>{plan.hasPassword ? "設定済み" : "未設定"}</td>
+                      <td>
+                        <div className="copy-feedback-wrap">
+                          <button
+                            className="secondary-button compact-button invite-share-trigger-button"
+                            data-tooltip="招待者へ送る配信用URLを作成"
+                            disabled={isCopyingInviteUrl}
+                            onClick={() => handleOpenInviteShareDialog(plan)}
+                            type="button"
+                          >
+                            {isCopyingInviteUrl ? "作成中" : "コピー"}
+                          </button>
+                          {copiedPlanId === plan.id ? (
+                            <span className="copy-feedback" role="status">
+                              コピーしました
+                            </span>
+                          ) : null}
+                        </div>
+                      </td>
+                      <td>{formatDateTime(plan.createdAt)}</td>
+                      <td className="action-column three-actions">
+                        <div className="row-actions">
+                          <Link
+                            className="secondary-button compact-button button-link"
+                            data-tooltip="このプランのイベント一覧を表示"
+                            href={`/admin/plans/${plan.id}`}
+                          >
+                            イベント
+                          </Link>
+                          <Link
+                            className="secondary-button compact-button button-link"
+                            data-tooltip="プラン名・年月・アクセスコードを編集"
+                            href={`/admin/plans/${plan.id}/edit`}
+                          >
+                            編集
+                          </Link>
+                          <button
+                            className="danger-button compact-button"
+                            data-tooltip="このプランを削除"
+                            disabled={deletingPlanId === plan.id}
+                            onClick={() => requestDisablePlan(plan)}
+                            type="button"
+                          >
+                            {deletingPlanId === plan.id ? "処理中" : "削除"}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
       </section>
+
+      {inviteShareTargetPlan ? (
+        <InviteShareDialog
+          error={inviteShareDialogError}
+          events={getShareableEvents(inviteShareTargetPlan.id, events)}
+          isProcessing={copyingPlanId === inviteShareTargetPlan.id}
+          onCancel={() => setInviteShareTargetPlan(null)}
+          onCopy={handleCopyInviteUrl}
+          onToggleEvent={toggleInviteShareEvent}
+          selectedEventIds={selectedInviteShareEventIds}
+        />
+      ) : null}
 
       {deleteTargetPlan ? (
         <ConfirmDialog
@@ -322,6 +410,31 @@ function AdminPlansDashboard() {
   );
 }
 
-function buildInviteUrl(publicToken: string) {
-  return buildAppUrl(`/invite/${publicToken}`);
+function getShareableEvents(planId: string, events: AdminEvent[]) {
+  return events
+    .filter(
+      (event) =>
+        event.planId === planId && event.isActive && event.status === "accepting"
+    )
+    .sort(compareEventsForInviteShare);
+}
+
+function compareEventsForInviteShare(first: AdminEvent, second: AdminEvent) {
+  const dateDiff = first.eventDate.localeCompare(second.eventDate);
+
+  if (dateDiff !== 0) {
+    return dateDiff;
+  }
+
+  const timeDiff = getTimeSlotOrder(first.timeSlot) - getTimeSlotOrder(second.timeSlot);
+
+  if (timeDiff !== 0) {
+    return timeDiff;
+  }
+
+  return first.sortOrder - second.sortOrder;
+}
+
+function getTimeSlotOrder(timeSlot: AdminEvent["timeSlot"]) {
+  return timeSlot === "AM" ? 0 : 1;
 }

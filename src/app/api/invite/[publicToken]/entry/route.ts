@@ -6,6 +6,10 @@ import {
   findPlanByPublicToken,
   verifyGuestPin
 } from "@/lib/invite/server";
+import {
+  findActiveInviteShareTokenForPlan,
+  validateInviteShareTokenParam
+} from "@/lib/invite/shareTokens";
 
 export const runtime = "nodejs";
 
@@ -20,6 +24,16 @@ type EntryRequest = {
 
 export async function POST(request: NextRequest, context: RouteContext) {
   const { publicToken } = await context.params;
+  const shareTokenValidation = validateInviteShareTokenParam(
+    request.nextUrl.searchParams.get("share")
+  );
+
+  if (!shareTokenValidation.ok) {
+    return NextResponse.json(
+      { message: shareTokenValidation.message },
+      { status: 400 }
+    );
+  }
 
   try {
     const plan = await findPlanByPublicToken(publicToken);
@@ -35,6 +49,18 @@ export async function POST(request: NextRequest, context: RouteContext) {
       return NextResponse.json(
         { message: "このプランは現在利用できません。" },
         { status: 410 }
+      );
+    }
+
+    const shareToken = await findActiveInviteShareTokenForPlan({
+      plan,
+      token: shareTokenValidation.token
+    });
+
+    if (!shareToken) {
+      return NextResponse.json(
+        { message: "配信用URLが正しくありません。" },
+        { status: 404 }
       );
     }
 

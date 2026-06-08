@@ -73,7 +73,13 @@ const inviteCredentialStorageKey = "rsvp-hub:invite-credentials:v1";
 const inviteCredentialMaxAgeMs = 1000 * 60 * 60 * 24 * 180;
 const inviteCredentialMaxEntries = 20;
 
-export function InviteStartScreen({ publicToken }: { publicToken: string }) {
+export function InviteStartScreen({
+  publicToken,
+  shareToken
+}: {
+  publicToken: string;
+  shareToken: string;
+}) {
   const router = useRouter();
   const [plan, setPlan] = useState<PublicPlan | null>(null);
   const [accessCode, setAccessCode] = useState("");
@@ -84,6 +90,7 @@ export function InviteStartScreen({ publicToken }: { publicToken: string }) {
   useEffect(() => {
     loadPublicPlan({
       publicToken,
+      shareToken,
       onPlan: (nextPlan) => {
         setPlan(nextPlan);
 
@@ -98,7 +105,7 @@ export function InviteStartScreen({ publicToken }: { publicToken: string }) {
       onError: setError,
       onFinally: () => setIsLoading(false)
     });
-  }, [publicToken]);
+  }, [publicToken, shareToken]);
 
   async function handlePasswordSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -112,7 +119,7 @@ export function InviteStartScreen({ publicToken }: { publicToken: string }) {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(`/api/invite/${publicToken}/password`, {
+      const response = await fetch(buildInviteApiPath(publicToken, "password", shareToken), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ accessCode: accessCode.trim() })
@@ -131,7 +138,7 @@ export function InviteStartScreen({ publicToken }: { publicToken: string }) {
           accessCode: accessCode.trim()
         }
       });
-      router.push(`/invite/${publicToken}/entry`);
+      router.push(buildInvitePagePath(publicToken, "entry", shareToken));
     } catch {
       setError("通信に失敗しました。時間をおいて再度お試しください。");
     } finally {
@@ -197,7 +204,7 @@ export function InviteStartScreen({ publicToken }: { publicToken: string }) {
           <Link
             className="primary-button button-link full-width top-message"
             data-tooltip="ニックネームとPINの入力へ進む"
-            href={`/invite/${publicToken}/entry`}
+            href={buildInvitePagePath(publicToken, "entry", shareToken)}
           >
             出欠入力へ進む
           </Link>
@@ -207,7 +214,13 @@ export function InviteStartScreen({ publicToken }: { publicToken: string }) {
   );
 }
 
-export function InviteEntryScreen({ publicToken }: { publicToken: string }) {
+export function InviteEntryScreen({
+  publicToken,
+  shareToken
+}: {
+  publicToken: string;
+  shareToken: string;
+}) {
   const router = useRouter();
   const [plan, setPlan] = useState<PublicPlan | null>(null);
   const [nickname, setNickname] = useState("");
@@ -219,6 +232,7 @@ export function InviteEntryScreen({ publicToken }: { publicToken: string }) {
   useEffect(() => {
     loadPublicPlan({
       publicToken,
+      shareToken,
       onPlan: (nextPlan) => {
         setPlan(nextPlan);
 
@@ -237,7 +251,7 @@ export function InviteEntryScreen({ publicToken }: { publicToken: string }) {
       onError: setError,
       onFinally: () => setIsLoading(false)
     });
-  }, [publicToken]);
+  }, [publicToken, shareToken]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -249,11 +263,11 @@ export function InviteEntryScreen({ publicToken }: { publicToken: string }) {
         const cachedCredential = readCachedInviteCredential(publicToken, plan);
 
         if (cachedCredential?.accessCode) {
-          await verifyInviteAccessCode(publicToken, cachedCredential.accessCode);
+          await verifyInviteAccessCode(publicToken, cachedCredential.accessCode, shareToken);
         }
       }
 
-      const response = await fetch(`/api/invite/${publicToken}/entry`, {
+      const response = await fetch(buildInviteApiPath(publicToken, "entry", shareToken), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ nickname, pin })
@@ -273,7 +287,7 @@ export function InviteEntryScreen({ publicToken }: { publicToken: string }) {
           pin: pin.trim()
         }
       });
-      router.push(`/invite/${publicToken}/responses`);
+      router.push(buildInvitePagePath(publicToken, "responses", shareToken));
     } catch {
       setError("通信に失敗しました。時間をおいて再度お試しください。");
     } finally {
@@ -353,7 +367,13 @@ export function InviteEntryScreen({ publicToken }: { publicToken: string }) {
   );
 }
 
-export function InviteResponsesScreen({ publicToken }: { publicToken: string }) {
+export function InviteResponsesScreen({
+  publicToken,
+  shareToken
+}: {
+  publicToken: string;
+  shareToken: string;
+}) {
   const router = useRouter();
   const [detail, setDetail] = useState<InviteResponseDetail | null>(null);
   const [answers, setAnswers] = useState<AnswerState>({});
@@ -366,7 +386,7 @@ export function InviteResponsesScreen({ publicToken }: { publicToken: string }) 
 
     async function loadResponseDetail() {
       try {
-        const response = await fetch(`/api/invite/${publicToken}/responses`);
+        const response = await fetch(buildInviteApiPath(publicToken, "responses", shareToken));
         const result = (await response.json().catch(() => null)) as
           | (InviteResponseDetail & { message?: string })
           | null;
@@ -407,7 +427,7 @@ export function InviteResponsesScreen({ publicToken }: { publicToken: string }) 
     return () => {
       isActive = false;
     };
-  }, [publicToken]);
+  }, [publicToken, shareToken]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -436,7 +456,7 @@ export function InviteResponsesScreen({ publicToken }: { publicToken: string }) 
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(`/api/invite/${publicToken}/responses`, {
+      const response = await fetch(buildInviteApiPath(publicToken, "responses", shareToken), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -454,7 +474,7 @@ export function InviteResponsesScreen({ publicToken }: { publicToken: string }) 
         return;
       }
 
-      router.push(`/invite/${publicToken}/complete`);
+      router.push(buildInvitePagePath(publicToken, "complete", shareToken));
     } catch {
       setError("保存に失敗しました。時間をおいて再度お試しください。");
     } finally {
@@ -516,7 +536,7 @@ export function InviteResponsesScreen({ publicToken }: { publicToken: string }) 
           <Link
             className="secondary-button button-link"
             data-tooltip="ニックネームとPIN入力へ戻る"
-            href={`/invite/${publicToken}/entry`}
+            href={buildInvitePagePath(publicToken, "entry", shareToken)}
           >
             戻る
           </Link>
@@ -534,7 +554,13 @@ export function InviteResponsesScreen({ publicToken }: { publicToken: string }) 
   );
 }
 
-export function InviteCompleteScreen({ publicToken }: { publicToken: string }) {
+export function InviteCompleteScreen({
+  publicToken,
+  shareToken
+}: {
+  publicToken: string;
+  shareToken: string;
+}) {
   const router = useRouter();
   const [detail, setDetail] = useState<InviteResponseDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -543,7 +569,7 @@ export function InviteCompleteScreen({ publicToken }: { publicToken: string }) {
   useEffect(() => {
     async function loadCompleteDetail() {
       try {
-        const response = await fetch(`/api/invite/${publicToken}/responses`);
+        const response = await fetch(buildInviteApiPath(publicToken, "responses", shareToken));
         const result = (await response.json().catch(() => null)) as
           | (InviteResponseDetail & { message?: string })
           | null;
@@ -562,7 +588,7 @@ export function InviteCompleteScreen({ publicToken }: { publicToken: string }) {
     }
 
     loadCompleteDetail();
-  }, [publicToken]);
+  }, [publicToken, shareToken]);
 
   if (isLoading) {
     return <InviteLoading />;
@@ -574,7 +600,7 @@ export function InviteCompleteScreen({ publicToken }: { publicToken: string }) {
         title="入力内容を表示できません"
         eyebrow="Error"
         message={error}
-        actionHref={`/invite/${publicToken}/entry`}
+        actionHref={buildInvitePagePath(publicToken, "entry", shareToken)}
         actionLabel="ニックネームとPINを入力する"
       />
     );
@@ -587,7 +613,7 @@ export function InviteCompleteScreen({ publicToken }: { publicToken: string }) {
       publicToken,
       plan: completeDetail.plan
     });
-    router.push(`/invite/${publicToken}/entry`);
+    router.push(buildInvitePagePath(publicToken, "entry", shareToken));
   }
 
   return (
@@ -778,17 +804,19 @@ function InviteMessage({
 
 async function loadPublicPlan({
   publicToken,
+  shareToken,
   onPlan,
   onError,
   onFinally
 }: {
   publicToken: string;
+  shareToken: string;
   onPlan: (plan: PublicPlan | null) => void;
   onError: (message: string) => void;
   onFinally: () => void;
 }) {
   try {
-    const response = await fetch(`/api/invite/${publicToken}`);
+    const response = await fetch(buildInviteApiPath(publicToken, "", shareToken));
     const result = (await response.json().catch(() => null)) as
       | { plan?: PublicPlan; message?: string }
       | null;
@@ -807,14 +835,44 @@ async function loadPublicPlan({
   }
 }
 
-async function verifyInviteAccessCode(publicToken: string, accessCode: string) {
-  const response = await fetch(`/api/invite/${publicToken}/password`, {
+async function verifyInviteAccessCode(
+  publicToken: string,
+  accessCode: string,
+  shareToken: string
+) {
+  const response = await fetch(buildInviteApiPath(publicToken, "password", shareToken), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ accessCode })
   });
 
   return response.ok;
+}
+
+function buildInvitePagePath(
+  publicToken: string,
+  segment: "" | "entry" | "responses" | "complete",
+  shareToken: string
+) {
+  const path = segment ? `/invite/${publicToken}/${segment}` : `/invite/${publicToken}`;
+
+  return appendShareQuery(path, shareToken);
+}
+
+function buildInviteApiPath(
+  publicToken: string,
+  endpoint: "" | "password" | "entry" | "responses",
+  shareToken: string
+) {
+  const path = endpoint ? `/api/invite/${publicToken}/${endpoint}` : `/api/invite/${publicToken}`;
+
+  return appendShareQuery(path, shareToken);
+}
+
+function appendShareQuery(path: string, shareToken: string) {
+  const token = shareToken.trim();
+
+  return token ? `${path}?share=${encodeURIComponent(token)}` : path;
 }
 
 function readCachedInviteCredential(publicToken: string, plan: PublicPlan) {

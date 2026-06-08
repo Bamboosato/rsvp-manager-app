@@ -192,17 +192,20 @@ export async function listGuestResponses({
 export async function saveInviteResponses({
   plan,
   guestId,
-  responses
+  responses,
+  allowedEventIds
 }: {
   plan: InvitePlan;
   guestId: string;
   responses: SaveInviteResponseInput[];
+  allowedEventIds: string[];
 }) {
   const events = await listInviteEvents(plan);
   const eventMap = new Map(events.map((event) => [event.id, event]));
+  const allowedEventIdSet = new Set(allowedEventIds);
   const invalidEvent = responses.find((response) => {
     const event = eventMap.get(response.eventId);
-    return !event || event.status !== "accepting";
+    return !allowedEventIdSet.has(response.eventId) || !event || event.status !== "accepting";
   });
 
   if (invalidEvent) {

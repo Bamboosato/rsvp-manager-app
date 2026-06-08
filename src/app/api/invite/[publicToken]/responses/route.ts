@@ -8,6 +8,10 @@ import {
   toPublicPlan,
   type AttendanceStatus
 } from "@/lib/invite/server";
+import {
+  findActiveInviteShareTokenForPlan,
+  validateInviteShareTokenParam
+} from "@/lib/invite/shareTokens";
 import { sendInviteResponseNotification } from "@/lib/notifications/server";
 
 export const runtime = "nodejs";
@@ -24,6 +28,17 @@ const attendanceStatuses = ["yes", "maybe", "no"] as const;
 
 export async function GET(request: NextRequest, context: RouteContext) {
   const { publicToken } = await context.params;
+  const shareTokenValidation = validateInviteShareTokenParam(
+    request.nextUrl.searchParams.get("share")
+  );
+
+  if (!shareTokenValidation.ok) {
+    return NextResponse.json(
+      { message: shareTokenValidation.message },
+      { status: 400 }
+    );
+  }
+
   const session = readInviteSession(request, publicToken);
 
   if (!session) {
@@ -50,6 +65,18 @@ export async function GET(request: NextRequest, context: RouteContext) {
       );
     }
 
+    const shareToken = await findActiveInviteShareTokenForPlan({
+      plan,
+      token: shareTokenValidation.token
+    });
+
+    if (!shareToken) {
+      return NextResponse.json(
+        { message: "配信用URLが正しくありません。" },
+        { status: 404 }
+      );
+    }
+
     const [events, responses] = await Promise.all([
       listInviteEvents(plan),
       listGuestResponses({
@@ -59,10 +86,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
       })
     ]);
     const responseMap = new Map(responses.map((response) => [response.eventId, response]));
-    const visibleEvents = events.filter((event) => {
-      const hasResponse = responseMap.has(event.id);
-      return event.status === "accepting" || hasResponse;
-    });
+    const sharedEventIds = new Set(shareToken.eventIds);
+    const visibleEvents = events.filter((event) => sharedEventIds.has(event.id));
 
     return NextResponse.json({
       plan: toPublicPlan(plan),
@@ -101,6 +126,17 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
 export async function POST(request: NextRequest, context: RouteContext) {
   const { publicToken } = await context.params;
+  const shareTokenValidation = validateInviteShareTokenParam(
+    request.nextUrl.searchParams.get("share")
+  );
+
+  if (!shareTokenValidation.ok) {
+    return NextResponse.json(
+      { message: shareTokenValidation.message },
+      { status: 400 }
+    );
+  }
+
   const session = readInviteSession(request, publicToken);
 
   if (!session) {
@@ -127,6 +163,18 @@ export async function POST(request: NextRequest, context: RouteContext) {
       );
     }
 
+    const shareToken = await findActiveInviteShareTokenForPlan({
+      plan,
+      token: shareTokenValidation.token
+    });
+
+    if (!shareToken) {
+      return NextResponse.json(
+        { message: "配信用URLが正しくありません。" },
+        { status: 404 }
+      );
+    }
+
     const body = (await request.json().catch(() => null)) as SaveResponsesRequest | null;
     const validation = validateSaveResponsesRequest(body);
 
@@ -137,7 +185,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const result = await saveInviteResponses({
       plan,
       guestId: session.guestId,
-      responses: validation.responses
+      responses: validation.responses,
+      allowedEventIds: shareToken.eventIds
     });
 
     if (!result.ok) {

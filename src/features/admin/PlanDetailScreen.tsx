@@ -5,10 +5,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
 import { ConfirmDialog } from "@/features/ui/ConfirmDialog";
-import { buildAppUrl } from "@/lib/appUrl";
 import { getFirebaseClientFirestore } from "@/lib/firebase/client";
 import { AdminAccountMenu } from "./AdminAccountMenu";
 import { AdminSectionMetrics } from "./AdminSectionMetrics";
+import { copyPlainTextToClipboard } from "./clipboard";
 import {
   disableEvent,
   formatEventDate,
@@ -18,6 +18,8 @@ import {
   type AdminEvent,
   type EventStatus
 } from "./events/data";
+import { InviteShareDialog } from "./InviteShareDialog";
+import { createInviteShareUrl } from "./inviteShareLinks";
 import {
   formatDateTime,
   formatYearMonth,
@@ -49,6 +51,10 @@ function PlanDetail({ planId }: { planId: string }) {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [isInviteUrlCopied, setIsInviteUrlCopied] = useState(false);
+  const [isInviteShareDialogOpen, setIsInviteShareDialogOpen] = useState(false);
+  const [selectedInviteShareEventIds, setSelectedInviteShareEventIds] = useState<string[]>([]);
+  const [isCreatingInviteShareUrl, setIsCreatingInviteShareUrl] = useState(false);
+  const [inviteShareDialogError, setInviteShareDialogError] = useState("");
   const [statusFeedbackEventId, setStatusFeedbackEventId] = useState<string | null>(null);
   const [updatingEventId, setUpdatingEventId] = useState<string | null>(null);
   const [statusChangeTarget, setStatusChangeTarget] = useState<{
@@ -126,28 +132,81 @@ function PlanDetail({ planId }: { planId: string }) {
     });
   }, [db, plan, user]);
 
-  const acceptingCount = events.filter((event) => event.status === "accepting").length;
+  const acceptingEvents = useMemo(
+    () => events.filter((event) => event.status === "accepting"),
+    [events]
+  );
+  const acceptingCount = acceptingEvents.length;
   const closedCount = events.filter((event) => event.status === "closed").length;
   const eventSummaryMap = useMemo(
     () => buildEventSummaryMap(responses),
     [responses]
   );
 
-  async function handleCopyInviteUrl() {
+  function handleOpenInviteShareDialog() {
     setError("");
     setNotice("");
+    setInviteShareDialogError("");
 
     if (!plan?.isActive) {
       setError("無効化済みプランのURLは共有できません。");
       return;
     }
 
-    try {
-      await copyInviteLinkToClipboard(plan);
-      showCopyFeedback();
-    } catch {
-      setError("URLコピーに失敗しました。ブラウザの設定を確認してください。");
+    setSelectedInviteShareEventIds(acceptingEvents.map((event) => event.id));
+    setIsInviteShareDialogOpen(true);
+  }
+
+  async function handleCopyInviteUrl() {
+    setInviteShareDialogError("");
+
+    if (!plan || !user) {
+      setInviteShareDialogError("プラン情報を確認できません。");
+      return;
     }
+
+    const acceptingEventIdSet = new Set(acceptingEvents.map((event) => event.id));
+    const selectedEventIds = selectedInviteShareEventIds.filter((eventId) =>
+      acceptingEventIdSet.has(eventId)
+    );
+
+    if (selectedEventIds.length === 0) {
+      setInviteShareDialogError("配信用URLに含めるイベントを選択してください。");
+      return;
+    }
+
+    setIsCreatingInviteShareUrl(true);
+
+    try {
+      const inviteUrl = await createInviteShareUrl({
+        user,
+        plan,
+        eventIds: selectedEventIds
+      });
+      await copyPlainTextToClipboard(inviteUrl);
+      setIsInviteShareDialogOpen(false);
+      showCopyFeedback();
+    } catch (copyError) {
+      setInviteShareDialogError(
+        copyError instanceof Error
+          ? copyError.message
+          : "URLコピーに失敗しました。ブラウザの設定を確認してください。"
+      );
+    } finally {
+      setIsCreatingInviteShareUrl(false);
+    }
+  }
+
+  function toggleInviteShareEvent(eventId: string, checked: boolean) {
+    setSelectedInviteShareEventIds((currentEventIds) => {
+      if (checked) {
+        return currentEventIds.includes(eventId)
+          ? currentEventIds
+          : [...currentEventIds, eventId];
+      }
+
+      return currentEventIds.filter((currentEventId) => currentEventId !== eventId);
+    });
   }
 
   function showCopyFeedback() {
@@ -313,13 +372,13 @@ function PlanDetail({ planId }: { planId: string }) {
         <div className="row-actions">
           <div className="copy-feedback-wrap">
             <button
-              className="secondary-button"
-              data-tooltip="招待者へ送るプラン名とURLをコピー"
+              className="secondary-button invite-share-trigger-button"
+              data-tooltip="招待者へ送る配信用URLを作成"
               disabled={!plan.isActive}
-              onClick={handleCopyInviteUrl}
+              onClick={handleOpenInviteShareDialog}
               type="button"
             >
-              URLコピー
+              配信用URL
             </button>
             {isInviteUrlCopied ? (
               <span className="copy-feedback" role="status">
@@ -494,6 +553,18 @@ function PlanDetail({ planId }: { planId: string }) {
         )}
       </section>
 
+      {isInviteShareDialogOpen ? (
+        <InviteShareDialog
+          error={inviteShareDialogError}
+          events={acceptingEvents}
+          isProcessing={isCreatingInviteShareUrl}
+          onCancel={() => setIsInviteShareDialogOpen(false)}
+          onCopy={handleCopyInviteUrl}
+          onToggleEvent={toggleInviteShareEvent}
+          selectedEventIds={selectedInviteShareEventIds}
+        />
+      ) : null}
+
       {statusChangeTarget ? (
         <ConfirmDialog
           confirmLabel={
@@ -542,43 +613,6 @@ function AttendanceBadges({
 
 function getEventTitle(event: AdminEvent) {
   return event.name || "イベント名未設定";
-}
-
-async function copyInviteLinkToClipboard(plan: AdminPlan) {
-  const inviteUrl = buildAppUrl(`/invite/${plan.publicToken}`);
-  const plainText = `${plan.name}\n${inviteUrl}`;
-
-  if (typeof ClipboardItem !== "undefined" && typeof navigator.clipboard.write === "function") {
-    const htmlText = `<a href="${escapeHtml(inviteUrl)}">${escapeHtml(plan.name)}</a>`;
-
-    try {
-      await navigator.clipboard.write([
-        new ClipboardItem({
-          "text/html": new Blob([htmlText], { type: "text/html" }),
-          "text/plain": new Blob([plainText], { type: "text/plain" })
-        })
-      ]);
-      return;
-    } catch {
-      // Fall back to plain text for browsers or paste targets that reject rich clipboard data.
-    }
-  }
-
-  await navigator.clipboard.writeText(plainText);
-}
-
-function escapeHtml(value: string) {
-  return value.replace(/[&<>"']/g, (character) => {
-    const entities: Record<string, string> = {
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#39;"
-    };
-
-    return entities[character] ?? character;
-  });
 }
 
 function buildStatusChangeMessage(event: AdminEvent, nextStatus: EventStatus) {
