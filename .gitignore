@@ -33,3 +33,6 @@ pnpm-debug.log*
 
 # ScreenShot
 screenshot/
+
+# generated artifacts
+outputs/
