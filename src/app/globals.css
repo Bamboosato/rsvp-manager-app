@@ -26,6 +26,7 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  min-height: 100dvh;
   min-width: 320px;
   margin: 0;
   color: var(--text);
@@ -50,6 +51,7 @@ main {
   gap: 12px;
   flex-shrink: 0;
   border-top: 1px solid var(--border);
+  margin-bottom: max(1px, env(safe-area-inset-bottom, 0px));
   padding: 14px 16px;
   color: var(--muted);
   background: var(--background);
@@ -721,6 +723,42 @@ h3 {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
+}
+
+.manual-link-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.manual-link-card {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 16px;
+  background: var(--surface);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.manual-link-card:hover {
+  border-color: rgba(37, 99, 235, 0.45);
+}
+
+.manual-link-card strong {
+  margin: 0;
+}
+
+.manual-link-card span {
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.manual-link-card em {
+  color: var(--accent);
+  font-style: normal;
+  font-weight: 800;
 }
 
 .help-reference-item,
@@ -2003,6 +2041,10 @@ th {
   }
 
   .help-reference-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .manual-link-grid {
     grid-template-columns: 1fr;
   }
 

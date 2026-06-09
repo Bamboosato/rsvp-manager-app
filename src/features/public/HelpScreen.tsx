@@ -105,6 +105,19 @@ const inviteMessageLines = [
   "再編集するときも同じニックネームとPINを使います。"
 ];
 
+const manualLinks = [
+  {
+    title: "管理者向け操作マニュアル",
+    body: "プラン作成、イベント管理、配信用URL共有、出欠内訳、代理対応を詳しく確認できます。",
+    href: "/manuals/rsvp-hub-admin-manual.pdf"
+  },
+  {
+    title: "招待者向け操作マニュアル",
+    body: "共有URLへのアクセス、本人確認、出欠入力、再編集の流れを確認できます。",
+    href: "/manuals/rsvp-hub-guest-manual.pdf"
+  }
+];
+
 const loginHref = "/login?next=/admin/plans&returnTo=/help";
 
 export function HelpScreen() {
@@ -202,6 +215,35 @@ function HelpContent({ showTitle = true }: { showTitle?: boolean }) {
             <strong>運用対応</strong>
             <span>締切後の変更やPIN忘れは、幹事さんが管理画面から対応します。</span>
           </div>
+        </div>
+      </section>
+
+      <section className="public-section" aria-labelledby="help-manual-heading">
+        <div className="public-section-heading">
+          <span className="public-section-icon" aria-hidden="true">
+            <Image alt="" height={32} src="/icons/rsvp-hub-icon.svg" width={32} />
+          </span>
+          <div>
+            <p className="eyebrow">Manual</p>
+            <h2 id="help-manual-heading">PDFマニュアル</h2>
+          </div>
+        </div>
+
+        <div className="manual-link-grid">
+          {manualLinks.map((manual) => (
+            <a
+              className="manual-link-card"
+              data-tooltip={`${manual.title}をPDFで開く`}
+              href={manual.href}
+              key={manual.href}
+              rel="noreferrer"
+              target="_blank"
+            >
+              <strong>{manual.title}</strong>
+              <span>{manual.body}</span>
+              <em>PDFを開く</em>
+            </a>
+          ))}
         </div>
       </section>
 
