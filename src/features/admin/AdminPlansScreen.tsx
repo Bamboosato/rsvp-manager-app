@@ -21,6 +21,7 @@ import {
 } from "./plans/data";
 import { createInviteShareUrl } from "./inviteShareLinks";
 import {
+  buildDefaultLineInviteGreeting,
   fetchAdminLineFriends,
   sendLineInvite,
   type AdminLineFriend
@@ -150,7 +151,7 @@ function AdminPlansDashboard() {
     const shareableEvents = getShareableEvents(plan.id, events);
     setSelectedLineDeliveryEventIds(shareableEvents.map((event) => event.id));
     setSelectedLineFriendIds([]);
-    setLineGreeting("");
+    setLineGreeting(buildDefaultLineInviteGreeting(plan.name));
     setLineDeliveryTargetPlan(null);
     setLineDeliveryPlanId(plan.id);
 

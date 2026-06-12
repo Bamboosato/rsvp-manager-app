@@ -197,7 +197,7 @@ export function LineInviteDeliveryDialog({
 
           {isGreetingStep ? (
             <label className="field">
-              <span>挨拶文（任意）</span>
+              <span>挨拶文</span>
               <textarea
                 disabled={isProcessing}
                 maxLength={500}

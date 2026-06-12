@@ -45,7 +45,7 @@ export function normalizeLineAccountId(value: string | undefined) {
 }
 
 export function buildLineRegistrationText(code: string) {
-  return `登録 ${code}`;
+  return code;
 }
 
 export function buildLineRegistrationUrl({
