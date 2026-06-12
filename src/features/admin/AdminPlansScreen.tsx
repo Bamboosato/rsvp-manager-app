@@ -11,6 +11,7 @@ import { AdminSectionMetrics } from "./AdminSectionMetrics";
 import { copyPlainTextToClipboard } from "./clipboard";
 import { subscribeOwnerEvents, type AdminEvent } from "./events/data";
 import { InviteShareDialog } from "./InviteShareDialog";
+import { LineInviteDeliveryDialog } from "./LineInviteDeliveryDialog";
 import {
   ensureEventAdminProfile,
   formatDateTime,
@@ -19,6 +20,11 @@ import {
   type AdminPlan
 } from "./plans/data";
 import { createInviteShareUrl } from "./inviteShareLinks";
+import {
+  fetchAdminLineFriends,
+  sendLineInvite,
+  type AdminLineFriend
+} from "./lineDelivery";
 
 const maxActivePlans = 3;
 
@@ -43,6 +49,13 @@ function AdminPlansDashboard() {
   const [inviteShareTargetPlan, setInviteShareTargetPlan] = useState<AdminPlan | null>(null);
   const [selectedInviteShareEventIds, setSelectedInviteShareEventIds] = useState<string[]>([]);
   const [inviteShareDialogError, setInviteShareDialogError] = useState("");
+  const [lineDeliveryTargetPlan, setLineDeliveryTargetPlan] = useState<AdminPlan | null>(null);
+  const [lineFriends, setLineFriends] = useState<AdminLineFriend[]>([]);
+  const [selectedLineDeliveryEventIds, setSelectedLineDeliveryEventIds] = useState<string[]>([]);
+  const [selectedLineFriendIds, setSelectedLineFriendIds] = useState<string[]>([]);
+  const [lineGreeting, setLineGreeting] = useState("");
+  const [lineDeliveryError, setLineDeliveryError] = useState("");
+  const [lineDeliveryPlanId, setLineDeliveryPlanId] = useState<string | null>(null);
   const [deletingPlanId, setDeletingPlanId] = useState<string | null>(null);
   const [deleteTargetPlan, setDeleteTargetPlan] = useState<AdminPlan | null>(null);
   const copyFeedbackTimerRef = useRef<number | null>(null);
@@ -124,6 +137,44 @@ function AdminPlansDashboard() {
     setInviteShareTargetPlan(plan);
   }
 
+  async function handleOpenLineDeliveryDialog(plan: AdminPlan) {
+    setError("");
+    setNotice("");
+    setLineDeliveryError("");
+
+    if (!user) {
+      setError("ログイン状態を確認できません。再度ログインしてください。");
+      return;
+    }
+
+    const shareableEvents = getShareableEvents(plan.id, events);
+    setSelectedLineDeliveryEventIds(shareableEvents.map((event) => event.id));
+    setSelectedLineFriendIds([]);
+    setLineGreeting("");
+    setLineDeliveryTargetPlan(null);
+    setLineDeliveryPlanId(plan.id);
+
+    try {
+      const friends = await fetchAdminLineFriends(user);
+      setLineFriends(friends);
+      setSelectedLineFriendIds(
+        friends
+          .filter((friend) => friend.isDeliverable && friend.isFriend)
+          .map((friend) => friend.id)
+      );
+      setLineDeliveryTargetPlan(plan);
+    } catch (lineError) {
+      const message =
+        lineError instanceof Error
+          ? lineError.message
+          : "LINE友だち一覧の取得に失敗しました。";
+      setError(message);
+      setLineDeliveryError(message);
+    } finally {
+      setLineDeliveryPlanId(null);
+    }
+  }
+
   async function handleCopyInviteUrl() {
     setInviteShareDialogError("");
 
@@ -176,6 +227,88 @@ function AdminPlansDashboard() {
 
       return currentEventIds.filter((currentEventId) => currentEventId !== eventId);
     });
+  }
+
+  function toggleLineDeliveryEvent(eventId: string, checked: boolean) {
+    setSelectedLineDeliveryEventIds((currentEventIds) => {
+      if (checked) {
+        return currentEventIds.includes(eventId)
+          ? currentEventIds
+          : [...currentEventIds, eventId];
+      }
+
+      return currentEventIds.filter((currentEventId) => currentEventId !== eventId);
+    });
+  }
+
+  function toggleLineFriend(friendId: string, checked: boolean) {
+    setSelectedLineFriendIds((currentFriendIds) => {
+      if (checked) {
+        return currentFriendIds.includes(friendId)
+          ? currentFriendIds
+          : [...currentFriendIds, friendId];
+      }
+
+      return currentFriendIds.filter((currentFriendId) => currentFriendId !== friendId);
+    });
+  }
+
+  async function handleSendLineInvite() {
+    setLineDeliveryError("");
+
+    if (!user || !lineDeliveryTargetPlan) {
+      setLineDeliveryError("ログイン状態を確認できません。再度ログインしてください。");
+      return;
+    }
+
+    const targetPlan = lineDeliveryTargetPlan;
+    const shareableEvents = getShareableEvents(targetPlan.id, events);
+    const shareableEventIdSet = new Set(shareableEvents.map((event) => event.id));
+    const selectedEventIds = selectedLineDeliveryEventIds.filter((eventId) =>
+      shareableEventIdSet.has(eventId)
+    );
+    const deliverableFriendIdSet = new Set(
+      lineFriends
+        .filter((friend) => friend.isDeliverable && friend.isFriend)
+        .map((friend) => friend.id)
+    );
+    const lineFriendIds = selectedLineFriendIds.filter((friendId) =>
+      deliverableFriendIdSet.has(friendId)
+    );
+
+    if (selectedEventIds.length === 0) {
+      setLineDeliveryError("配信用URLに含めるイベントを選択してください。");
+      return;
+    }
+
+    if (lineFriendIds.length === 0) {
+      setLineDeliveryError("LINE配信先を選択してください。");
+      return;
+    }
+
+    setLineDeliveryPlanId(targetPlan.id);
+
+    try {
+      const result = await sendLineInvite({
+        user,
+        planId: targetPlan.id,
+        eventIds: selectedEventIds,
+        lineFriendIds,
+        greeting: lineGreeting
+      });
+      setLineDeliveryTargetPlan(null);
+      setNotice(
+        result.failedCount > 0
+          ? `LINE配信を実行しました。成功 ${result.sentCount}件 / 失敗 ${result.failedCount}件`
+          : `LINE配信を実行しました。送信先 ${result.sentCount}件`
+      );
+    } catch (lineError) {
+      setLineDeliveryError(
+        lineError instanceof Error ? lineError.message : "LINE配信に失敗しました。"
+      );
+    } finally {
+      setLineDeliveryPlanId(null);
+    }
   }
 
   function showCopyFeedback(planId: string) {
@@ -345,6 +478,15 @@ function AdminPlansDashboard() {
                             </span>
                           ) : null}
                         </div>
+                        <button
+                          className="secondary-button compact-button line-delivery-trigger-button"
+                          data-tooltip="配信用URLをLINE友だちへ送信"
+                          disabled={lineDeliveryPlanId === plan.id}
+                          onClick={() => handleOpenLineDeliveryDialog(plan)}
+                          type="button"
+                        >
+                          {lineDeliveryPlanId === plan.id ? "読込中" : "LINE配信"}
+                        </button>
                       </td>
                       <td>{formatDateTime(plan.createdAt)}</td>
                       <td className="action-column three-actions">
@@ -392,6 +534,23 @@ function AdminPlansDashboard() {
           onCopy={handleCopyInviteUrl}
           onToggleEvent={toggleInviteShareEvent}
           selectedEventIds={selectedInviteShareEventIds}
+        />
+      ) : null}
+
+      {lineDeliveryTargetPlan ? (
+        <LineInviteDeliveryDialog
+          error={lineDeliveryError}
+          events={getShareableEvents(lineDeliveryTargetPlan.id, events)}
+          friends={lineFriends}
+          greeting={lineGreeting}
+          isProcessing={lineDeliveryPlanId === lineDeliveryTargetPlan.id}
+          onCancel={() => setLineDeliveryTargetPlan(null)}
+          onGreetingChange={setLineGreeting}
+          onSend={handleSendLineInvite}
+          onToggleEvent={toggleLineDeliveryEvent}
+          onToggleFriend={toggleLineFriend}
+          selectedEventIds={selectedLineDeliveryEventIds}
+          selectedFriendIds={selectedLineFriendIds}
         />
       ) : null}
 

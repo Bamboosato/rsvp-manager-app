@@ -129,6 +129,15 @@ export function AdminAccountMenu({ user, onSignOut }: AdminAccountMenuProps) {
 
           <Link
             className="secondary-button button-link account-help-link"
+            data-tooltip="LINE連携や友だち一覧を開く"
+            href="/admin/account"
+            onClick={() => setIsOpen(false)}
+          >
+            アカウント設定
+          </Link>
+
+          <Link
+            className="secondary-button button-link account-help-link"
             data-tooltip="ヘルプ/操作説明を開く"
             href="/help"
             onClick={() => setIsOpen(false)}
