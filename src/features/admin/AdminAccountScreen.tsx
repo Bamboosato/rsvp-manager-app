@@ -280,21 +280,32 @@ function AdminAccountSettings() {
               </div>
               <div className="line-registration-actions">
                 {registration.registrationUrl ? (
-                  <span className="copy-feedback-wrap">
-                    <button
-                      className="secondary-button"
-                      data-tooltip="LINE登録用URLをコピー"
-                      onClick={handleCopyRegistrationUrl}
-                      type="button"
+                  <div className="line-registration-button-stack">
+                    <span className="copy-feedback-wrap">
+                      <button
+                        className="secondary-button line-registration-button"
+                        data-tooltip="LINE登録用URLをコピー"
+                        onClick={handleCopyRegistrationUrl}
+                        type="button"
+                      >
+                        URLコピー
+                      </button>
+                      {copyFeedback ? (
+                        <span className="copy-feedback" role="status">
+                          {copyFeedback}
+                        </span>
+                      ) : null}
+                    </span>
+                    <a
+                      className="secondary-button button-link line-registration-button"
+                      data-tooltip="LINEを開く"
+                      href={registration.registrationUrl}
+                      rel="noreferrer"
+                      target="_blank"
                     >
-                      URLコピー
-                    </button>
-                    {copyFeedback ? (
-                      <span className="copy-feedback" role="status">
-                        {copyFeedback}
-                      </span>
-                    ) : null}
-                  </span>
+                      LINEを開く
+                    </a>
+                  </div>
                 ) : null}
                 {registration.qrCodeSvg ? (
                   <div className="line-qr-card" aria-label="LINE友だち登録用QRコード">

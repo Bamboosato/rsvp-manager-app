@@ -340,11 +340,12 @@ button {
 }
 
 .account-logout-button {
-  justify-self: start;
+  justify-self: end;
 }
 
 .account-help-link {
   justify-self: start;
+  width: 154px;
 }
 
 .eyebrow {
@@ -1968,6 +1969,16 @@ th {
   flex-wrap: wrap;
   justify-content: center;
   gap: 32px;
+}
+
+.line-registration-button-stack {
+  display: grid;
+  gap: 10px;
+  justify-items: stretch;
+}
+
+.line-registration-button {
+  width: 128px;
 }
 
 .line-qr-card {
