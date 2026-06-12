@@ -53,7 +53,7 @@ export function LegalFooter() {
   return (
     <>
       <footer className="app-footer">
-        <span className="footer-copy">© 2026 Bamboosatov1.0.0</span>
+        <span className="footer-copy">© 2026 Bamboosatov1.1.0</span>
         <nav aria-label="法的文書" className="footer-links">
           <a href={legalModalConfig.terms.href} onClick={(event) => handleLegalLinkClick(event, "terms")}>
             {legalModalConfig.terms.linkLabel}

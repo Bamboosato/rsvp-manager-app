@@ -19,7 +19,13 @@ import {
   type EventStatus
 } from "./events/data";
 import { InviteShareDialog } from "./InviteShareDialog";
+import { LineInviteDeliveryDialog } from "./LineInviteDeliveryDialog";
 import { createInviteShareUrl } from "./inviteShareLinks";
+import {
+  fetchAdminLineFriends,
+  sendLineInvite,
+  type AdminLineFriend
+} from "./lineDelivery";
 import {
   formatDateTime,
   formatYearMonth,
@@ -55,6 +61,13 @@ function PlanDetail({ planId }: { planId: string }) {
   const [selectedInviteShareEventIds, setSelectedInviteShareEventIds] = useState<string[]>([]);
   const [isCreatingInviteShareUrl, setIsCreatingInviteShareUrl] = useState(false);
   const [inviteShareDialogError, setInviteShareDialogError] = useState("");
+  const [isLineDeliveryDialogOpen, setIsLineDeliveryDialogOpen] = useState(false);
+  const [lineFriends, setLineFriends] = useState<AdminLineFriend[]>([]);
+  const [selectedLineDeliveryEventIds, setSelectedLineDeliveryEventIds] = useState<string[]>([]);
+  const [selectedLineFriendIds, setSelectedLineFriendIds] = useState<string[]>([]);
+  const [lineGreeting, setLineGreeting] = useState("");
+  const [isSendingLineInvite, setIsSendingLineInvite] = useState(false);
+  const [lineDeliveryDialogError, setLineDeliveryDialogError] = useState("");
   const [statusFeedbackEventId, setStatusFeedbackEventId] = useState<string | null>(null);
   const [updatingEventId, setUpdatingEventId] = useState<string | null>(null);
   const [statusChangeTarget, setStatusChangeTarget] = useState<{
@@ -157,6 +170,48 @@ function PlanDetail({ planId }: { planId: string }) {
     setIsInviteShareDialogOpen(true);
   }
 
+  async function handleOpenLineDeliveryDialog() {
+    setError("");
+    setNotice("");
+    setLineDeliveryDialogError("");
+
+    if (!plan?.isActive) {
+      setError("無効化済みプランのURLは共有できません。");
+      return;
+    }
+
+    if (!user) {
+      setError("ログイン状態を確認できません。再度ログインしてください。");
+      return;
+    }
+
+    setSelectedLineDeliveryEventIds(acceptingEvents.map((event) => event.id));
+    setSelectedLineFriendIds([]);
+    setLineGreeting("");
+    setIsLineDeliveryDialogOpen(false);
+    setIsSendingLineInvite(true);
+
+    try {
+      const friends = await fetchAdminLineFriends(user);
+      setLineFriends(friends);
+      setSelectedLineFriendIds(
+        friends
+          .filter((friend) => friend.isDeliverable && friend.isFriend)
+          .map((friend) => friend.id)
+      );
+      setIsLineDeliveryDialogOpen(true);
+    } catch (lineError) {
+      const message =
+        lineError instanceof Error
+          ? lineError.message
+          : "LINE友だち一覧の取得に失敗しました。";
+      setError(message);
+      setLineDeliveryDialogError(message);
+    } finally {
+      setIsSendingLineInvite(false);
+    }
+  }
+
   async function handleCopyInviteUrl() {
     setInviteShareDialogError("");
 
@@ -207,6 +262,86 @@ function PlanDetail({ planId }: { planId: string }) {
 
       return currentEventIds.filter((currentEventId) => currentEventId !== eventId);
     });
+  }
+
+  function toggleLineDeliveryEvent(eventId: string, checked: boolean) {
+    setSelectedLineDeliveryEventIds((currentEventIds) => {
+      if (checked) {
+        return currentEventIds.includes(eventId)
+          ? currentEventIds
+          : [...currentEventIds, eventId];
+      }
+
+      return currentEventIds.filter((currentEventId) => currentEventId !== eventId);
+    });
+  }
+
+  function toggleLineFriend(friendId: string, checked: boolean) {
+    setSelectedLineFriendIds((currentFriendIds) => {
+      if (checked) {
+        return currentFriendIds.includes(friendId)
+          ? currentFriendIds
+          : [...currentFriendIds, friendId];
+      }
+
+      return currentFriendIds.filter((currentFriendId) => currentFriendId !== friendId);
+    });
+  }
+
+  async function handleSendLineInvite() {
+    setLineDeliveryDialogError("");
+
+    if (!plan || !user) {
+      setLineDeliveryDialogError("プラン情報を確認できません。");
+      return;
+    }
+
+    const acceptingEventIdSet = new Set(acceptingEvents.map((event) => event.id));
+    const selectedEventIds = selectedLineDeliveryEventIds.filter((eventId) =>
+      acceptingEventIdSet.has(eventId)
+    );
+    const deliverableFriendIdSet = new Set(
+      lineFriends
+        .filter((friend) => friend.isDeliverable && friend.isFriend)
+        .map((friend) => friend.id)
+    );
+    const lineFriendIds = selectedLineFriendIds.filter((friendId) =>
+      deliverableFriendIdSet.has(friendId)
+    );
+
+    if (selectedEventIds.length === 0) {
+      setLineDeliveryDialogError("配信用URLに含めるイベントを選択してください。");
+      return;
+    }
+
+    if (lineFriendIds.length === 0) {
+      setLineDeliveryDialogError("LINE配信先を選択してください。");
+      return;
+    }
+
+    setIsSendingLineInvite(true);
+
+    try {
+      const result = await sendLineInvite({
+        user,
+        planId: plan.id,
+        eventIds: selectedEventIds,
+        lineFriendIds,
+        greeting: lineGreeting
+      });
+      setIsLineDeliveryDialogOpen(false);
+      setNotice(
+        result.failedCount > 0
+          ? `LINE配信を実行しました。成功 ${result.sentCount}件 / 失敗 ${result.failedCount}件`
+          : `LINE配信を実行しました。送信先 ${result.sentCount}件`
+      );
+    } catch (lineError) {
+      setLineDeliveryDialogError(
+        lineError instanceof Error ? lineError.message : "LINE配信に失敗しました。"
+      );
+    } finally {
+      setIsSendingLineInvite(false);
+    }
   }
 
   function showCopyFeedback() {
@@ -386,6 +521,15 @@ function PlanDetail({ planId }: { planId: string }) {
               </span>
             ) : null}
           </div>
+          <button
+            className="secondary-button invite-share-trigger-button"
+            data-tooltip="配信用URLをLINE友だちへ送信"
+            disabled={!plan.isActive || isSendingLineInvite}
+            onClick={handleOpenLineDeliveryDialog}
+            type="button"
+          >
+            {isSendingLineInvite ? "読込中" : "LINE配信"}
+          </button>
         </div>
       </section>
 
@@ -562,6 +706,23 @@ function PlanDetail({ planId }: { planId: string }) {
           onCopy={handleCopyInviteUrl}
           onToggleEvent={toggleInviteShareEvent}
           selectedEventIds={selectedInviteShareEventIds}
+        />
+      ) : null}
+
+      {isLineDeliveryDialogOpen ? (
+        <LineInviteDeliveryDialog
+          error={lineDeliveryDialogError}
+          events={acceptingEvents}
+          friends={lineFriends}
+          greeting={lineGreeting}
+          isProcessing={isSendingLineInvite}
+          onCancel={() => setIsLineDeliveryDialogOpen(false)}
+          onGreetingChange={setLineGreeting}
+          onSend={handleSendLineInvite}
+          onToggleEvent={toggleLineDeliveryEvent}
+          onToggleFriend={toggleLineFriend}
+          selectedEventIds={selectedLineDeliveryEventIds}
+          selectedFriendIds={selectedLineFriendIds}
         />
       ) : null}
 
