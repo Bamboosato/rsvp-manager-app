@@ -22,6 +22,7 @@ import { InviteShareDialog } from "./InviteShareDialog";
 import { LineInviteDeliveryDialog } from "./LineInviteDeliveryDialog";
 import { createInviteShareUrl } from "./inviteShareLinks";
 import {
+  buildDefaultLineInviteGreeting,
   fetchAdminLineFriends,
   sendLineInvite,
   type AdminLineFriend
@@ -187,7 +188,7 @@ function PlanDetail({ planId }: { planId: string }) {
 
     setSelectedLineDeliveryEventIds(acceptingEvents.map((event) => event.id));
     setSelectedLineFriendIds([]);
-    setLineGreeting("");
+    setLineGreeting(buildDefaultLineInviteGreeting(plan.name));
     setIsLineDeliveryDialogOpen(false);
     setIsSendingLineInvite(true);
 

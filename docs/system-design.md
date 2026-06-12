@@ -94,6 +94,7 @@ flowchart LR
 | `/login` | イベント管理者ログイン | 未ログイン |
 | `/password-reset` | ログインパスワードリセット | 未ログイン |
 | `/admin/plans` | マイプラン | イベント管理者ログイン必須 |
+| `/admin/account` | アカウント設定、LINE連携、LINE友だち一覧 | イベント管理者ログイン必須 |
 | `/admin/plans/new` | プラン追加 | イベント管理者ログイン必須 |
 | `/admin/plans/{planId}` | プラン詳細、イベント一覧 | イベント管理者ログイン必須 |
 | `/admin/plans/{planId}/events/new` | イベント追加 | イベント管理者ログイン必須 |
@@ -120,6 +121,10 @@ flowchart LR
 | `/api/admin/responses/{responseId}` | PATCH | Firebase ID token | 管理者回答修正 |
 | `/api/admin/guests/{guestId}/pin-reset` | POST | Firebase ID token | PINリセット |
 | `/api/admin/notification-tokens` | POST | Firebase ID token | FCM token登録 |
+| `/api/admin/line/registration` | GET | Firebase ID token | LINE友だち登録URL、QRコード用情報取得 |
+| `/api/admin/line/friends` | GET | Firebase ID token | LINE友だち一覧取得 |
+| `/api/admin/line/friends/{friendId}` | PATCH/DELETE | Firebase ID token | LINE友だちのメモ、配信対象、削除 |
+| `/api/admin/line/messages` | POST | Firebase ID token | 選択イベントの配信用URLをLINE友だちへ送信 |
 
 ### 6.2 招待者向けAPI
 
@@ -133,7 +138,20 @@ flowchart LR
 
 `GET /api/invite/{publicToken}/responses` は、共有トークンに保存された `eventIds` に含まれる有効イベントを返す。URL作成後に締切済みへ変更されたイベントも返すが、招待者による更新は不可とする。削除/無効化済みイベントは返さない。
 
-### 6.3 招待者セッション
+### 6.3 LINE Webhook
+
+| API | Method | 認証 | 内容 |
+| --- | --- | --- | --- |
+| `/api/line/webhook/{lineAccountId}` | POST | LINE署名検証 | follow/unfollow/message event受信 |
+
+- 既定URLは `/api/line/webhook/default` とする。
+- `x-line-signature` を `LINE_CHANNEL_SECRET` で検証する。
+- text messageから登録コード単体を解析し、管理者アカウントとLINE userIdを紐づける。
+- 既存案内との互換性のため、`登録 {code}` 形式も受け付ける。
+- 登録成功時はLINEプロフィールを取得し、取得できる場合は画像をFirebase Storageへ保存する。
+- unfollow eventでは対象LINE userIdを配信対象外にする。
+
+### 6.4 招待者セッション
 
 - 招待者はFirebase Authenticationにログインしない。
 - `entry` APIでニックネーム+PIN照合に成功した場合、短期の招待者セッションを発行する。
@@ -153,6 +171,10 @@ events/{eventId}
 guests/{guestId}
 responses/{responseId}
 notificationTokens/{tokenId}
+lineRegistrationCodes/{code}
+lineRegistrationCodeOwners/{lineAccountId_ownerUid}
+lineFriends/{friendId}
+lineMessageDeliveries/{deliveryId}
 auditLogs/{auditLogId}
 ```
 

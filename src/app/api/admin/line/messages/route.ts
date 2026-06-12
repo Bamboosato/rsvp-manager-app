@@ -108,7 +108,6 @@ export async function POST(request: NextRequest) {
     );
     const messageText = buildLineInviteMessage({
       greeting: validation.greeting,
-      planName: typeof planData.name === "string" ? planData.name : "出欠確認",
       inviteUrl
     });
     const results = await Promise.all(
@@ -225,17 +224,13 @@ function validateSendLineInviteRequest(
 
 function buildLineInviteMessage({
   greeting,
-  planName,
   inviteUrl
 }: {
   greeting: string;
-  planName: string;
   inviteUrl: string;
 }) {
   return [
     greeting,
-    `${planName} の出欠確認です。`,
-    "以下のURLから出欠を入力してください。",
     inviteUrl
   ]
     .filter(Boolean)

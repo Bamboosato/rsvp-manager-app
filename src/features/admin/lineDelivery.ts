@@ -11,6 +11,12 @@ export type AdminLineFriend = {
   updatedAt: string | null;
 };
 
+export function buildDefaultLineInviteGreeting(planName: string) {
+  const normalizedPlanName = planName.trim() || "出欠確認";
+
+  return `${normalizedPlanName} の出欠確認です。\n以下のURLから出欠を入力してください。`;
+}
+
 type LineFriendsResponse = {
   friends?: AdminLineFriend[];
   message?: string;
