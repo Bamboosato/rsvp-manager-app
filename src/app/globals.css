@@ -2237,6 +2237,11 @@ th {
     width: 100%;
   }
 
+  .line-friends-table th:nth-child(n),
+  .line-friends-table td:nth-child(n) {
+    width: 100%;
+  }
+
   .line-friends-table tbody {
     display: grid;
     gap: 14px;
@@ -2747,6 +2752,11 @@ th {
   .line-friends-table tr,
   .line-friends-table td {
     display: block;
+    width: 100%;
+  }
+
+  .line-friends-table th:nth-child(n),
+  .line-friends-table td:nth-child(n) {
     width: 100%;
   }
 
