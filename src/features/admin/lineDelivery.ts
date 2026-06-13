@@ -4,6 +4,7 @@ export type AdminLineFriend = {
   id: string;
   displayName: string;
   pictureUrl: string | null;
+  linePictureUrl: string | null;
   memo: string;
   isDeliverable: boolean;
   isFriend: boolean;
