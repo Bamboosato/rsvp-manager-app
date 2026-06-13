@@ -3,7 +3,7 @@ import { buildAppUrl } from "@/lib/appUrl";
 import type { AdminPlan } from "./plans/data";
 
 type CreateInviteShareTokenResponse = {
-  shareToken?: string;
+  inviteCode?: string;
   message?: string;
 };
 
@@ -29,11 +29,9 @@ export async function createInviteShareUrl({
     | CreateInviteShareTokenResponse
     | null;
 
-  if (!response.ok || !result?.shareToken) {
+  if (!response.ok || !result?.inviteCode) {
     throw new Error(result?.message ?? "配信用URLの作成に失敗しました。");
   }
 
-  return buildAppUrl(
-    `/invite/${plan.publicToken}?share=${encodeURIComponent(result.shareToken)}`
-  );
+  return buildAppUrl(`/i/${result.inviteCode}`);
 }

@@ -1,23 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
+import { findActiveInviteByCode } from "@/lib/invite/codeLookup";
 import { readInviteSession } from "@/lib/invite/session";
 import {
-  findPlanByPublicToken,
   listGuestResponses,
   listInviteEvents,
   saveInviteResponses,
   toPublicPlan,
   type AttendanceStatus
 } from "@/lib/invite/server";
-import {
-  findActiveInviteShareTokenForPlan,
-  validateInviteShareTokenParam
-} from "@/lib/invite/shareTokens";
 import { sendInviteResponseNotification } from "@/lib/notifications/server";
 
 export const runtime = "nodejs";
 
 type RouteContext = {
-  params: Promise<{ publicToken: string }>;
+  params: Promise<{ inviteCode: string }>;
 };
 
 type SaveResponsesRequest = {
@@ -27,19 +23,8 @@ type SaveResponsesRequest = {
 const attendanceStatuses = ["yes", "maybe", "no"] as const;
 
 export async function GET(request: NextRequest, context: RouteContext) {
-  const { publicToken } = await context.params;
-  const shareTokenValidation = validateInviteShareTokenParam(
-    request.nextUrl.searchParams.get("share")
-  );
-
-  if (!shareTokenValidation.ok) {
-    return NextResponse.json(
-      { message: shareTokenValidation.message },
-      { status: 400 }
-    );
-  }
-
-  const session = readInviteSession(request, publicToken);
+  const { inviteCode } = await context.params;
+  const session = readInviteSession(request, inviteCode);
 
   if (!session) {
     return NextResponse.json(
@@ -49,36 +34,25 @@ export async function GET(request: NextRequest, context: RouteContext) {
   }
 
   try {
-    const plan = await findPlanByPublicToken(publicToken);
+    const invite = await findActiveInviteByCode(inviteCode);
 
-    if (!plan || plan.id !== session.planId || plan.ownerUid !== session.ownerUid) {
+    if (!invite.ok) {
+      return NextResponse.json({ message: invite.message }, { status: invite.status });
+    }
+
+    if (
+      invite.plan.id !== session.planId ||
+      invite.plan.ownerUid !== session.ownerUid ||
+      invite.shareToken.ownerUid !== session.ownerUid
+    ) {
       return NextResponse.json(
         { message: "URLが正しくないか、利用できません。" },
         { status: 404 }
       );
     }
 
-    if (!plan.isActive) {
-      return NextResponse.json(
-        { message: "このプランは現在利用できません。" },
-        { status: 410 }
-      );
-    }
-
-    const shareToken = await findActiveInviteShareTokenForPlan({
-      plan,
-      token: shareTokenValidation.token
-    });
-
-    if (!shareToken) {
-      return NextResponse.json(
-        { message: "配信用URLが正しくありません。" },
-        { status: 404 }
-      );
-    }
-
     const [events, responses] = await Promise.all([
-      listInviteEvents(plan),
+      listInviteEvents(invite.plan),
       listGuestResponses({
         ownerUid: session.ownerUid,
         planId: session.planId,
@@ -86,11 +60,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
       })
     ]);
     const responseMap = new Map(responses.map((response) => [response.eventId, response]));
-    const sharedEventIds = new Set(shareToken.eventIds);
+    const sharedEventIds = new Set(invite.shareToken.eventIds);
     const visibleEvents = events.filter((event) => sharedEventIds.has(event.id));
 
     return NextResponse.json({
-      plan: toPublicPlan(plan),
+      plan: toPublicPlan(invite.plan),
       guest: {
         nickname: session.nickname
       },
@@ -125,19 +99,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
 }
 
 export async function POST(request: NextRequest, context: RouteContext) {
-  const { publicToken } = await context.params;
-  const shareTokenValidation = validateInviteShareTokenParam(
-    request.nextUrl.searchParams.get("share")
-  );
-
-  if (!shareTokenValidation.ok) {
-    return NextResponse.json(
-      { message: shareTokenValidation.message },
-      { status: 400 }
-    );
-  }
-
-  const session = readInviteSession(request, publicToken);
+  const { inviteCode } = await context.params;
+  const session = readInviteSession(request, inviteCode);
 
   if (!session) {
     return NextResponse.json(
@@ -147,30 +110,19 @@ export async function POST(request: NextRequest, context: RouteContext) {
   }
 
   try {
-    const plan = await findPlanByPublicToken(publicToken);
+    const invite = await findActiveInviteByCode(inviteCode);
 
-    if (!plan || plan.id !== session.planId || plan.ownerUid !== session.ownerUid) {
+    if (!invite.ok) {
+      return NextResponse.json({ message: invite.message }, { status: invite.status });
+    }
+
+    if (
+      invite.plan.id !== session.planId ||
+      invite.plan.ownerUid !== session.ownerUid ||
+      invite.shareToken.ownerUid !== session.ownerUid
+    ) {
       return NextResponse.json(
         { message: "URLが正しくないか、利用できません。" },
-        { status: 404 }
-      );
-    }
-
-    if (!plan.isActive) {
-      return NextResponse.json(
-        { message: "このプランは現在利用できません。" },
-        { status: 410 }
-      );
-    }
-
-    const shareToken = await findActiveInviteShareTokenForPlan({
-      plan,
-      token: shareTokenValidation.token
-    });
-
-    if (!shareToken) {
-      return NextResponse.json(
-        { message: "配信用URLが正しくありません。" },
         { status: 404 }
       );
     }
@@ -183,10 +135,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
     }
 
     const result = await saveInviteResponses({
-      plan,
+      plan: invite.plan,
       guestId: session.guestId,
       responses: validation.responses,
-      allowedEventIds: shareToken.eventIds
+      allowedEventIds: invite.shareToken.eventIds
     });
 
     if (!result.ok) {
@@ -194,9 +146,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
     }
 
     await sendInviteResponseNotification({
-      ownerUid: plan.ownerUid,
-      planId: plan.id,
-      planName: plan.name,
+      ownerUid: invite.plan.ownerUid,
+      planId: invite.plan.id,
+      planName: invite.plan.name,
       nickname: session.nickname,
       origin: request.nextUrl.origin
     }).catch((error) => {

@@ -96,16 +96,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const shareToken = await createInviteShareToken({
+    const inviteCode = await createInviteShareToken({
       ownerUid: authUser.uid,
       planId: validation.planId,
       publicToken,
       eventIds: validation.eventIds
     });
-    const inviteUrl = buildAppUrl(
-      `/invite/${publicToken}?share=${encodeURIComponent(shareToken)}`,
-      request.nextUrl.origin
-    );
+    const inviteUrl = buildAppUrl(`/i/${inviteCode}`, request.nextUrl.origin);
     const messageText = buildLineInviteMessage({
       greeting: validation.greeting,
       inviteUrl
@@ -121,7 +118,7 @@ export async function POST(request: NextRequest) {
           ownerUid: authUser.uid,
           planId: validation.planId,
           eventIds: validation.eventIds,
-          shareToken,
+          shareToken: inviteCode,
           friendId: friend.id,
           lineUserId: friend.lineUserId,
           displayName: friend.displayName,
@@ -145,7 +142,7 @@ export async function POST(request: NextRequest) {
     const failedCount = results.length - sentCount;
 
     return NextResponse.json({
-      shareToken,
+      inviteCode,
       inviteUrl,
       sentCount,
       failedCount,

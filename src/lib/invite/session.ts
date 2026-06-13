@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export type InviteSession = {
   kind: "invite";
-  publicToken: string;
+  inviteCode: string;
   planId: string;
   ownerUid: string;
   guestId: string;
@@ -13,7 +13,7 @@ export type InviteSession = {
 
 export type InvitePasswordSession = {
   kind: "password";
-  publicToken: string;
+  inviteCode: string;
   planId: string;
   exp: number;
 };
@@ -22,21 +22,21 @@ const inviteSessionCookieName = "rsvp_invite_session";
 const invitePasswordCookieName = "rsvp_invite_password";
 const inviteSessionMaxAgeSeconds = 60 * 60 * 24;
 
-export function readInviteSession(request: NextRequest, publicToken: string) {
+export function readInviteSession(request: NextRequest, inviteCode: string) {
   return readSignedCookie<InviteSession>({
     request,
     cookieName: inviteSessionCookieName,
     expectedKind: "invite",
-    publicToken
+    inviteCode
   });
 }
 
-export function readInvitePasswordSession(request: NextRequest, publicToken: string) {
+export function readInvitePasswordSession(request: NextRequest, inviteCode: string) {
   return readSignedCookie<InvitePasswordSession>({
     request,
     cookieName: invitePasswordCookieName,
     expectedKind: "password",
-    publicToken
+    inviteCode
   });
 }
 
@@ -61,12 +61,12 @@ function readSignedCookie<T extends InviteSession | InvitePasswordSession>({
   request,
   cookieName,
   expectedKind,
-  publicToken
+  inviteCode
 }: {
   request: NextRequest;
   cookieName: string;
   expectedKind: T["kind"];
-  publicToken: string;
+  inviteCode: string;
 }) {
   const rawCookie = request.cookies.get(cookieName)?.value;
 
@@ -85,7 +85,7 @@ function readSignedCookie<T extends InviteSession | InvitePasswordSession>({
   if (
     !payload ||
     payload.kind !== expectedKind ||
-    payload.publicToken !== publicToken ||
+    payload.inviteCode !== inviteCode ||
     payload.exp <= Math.floor(Date.now() / 1000)
   ) {
     return null;

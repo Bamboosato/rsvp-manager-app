@@ -1,20 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
+import { findActiveInviteByCode } from "@/lib/invite/codeLookup";
 import { readInvitePasswordSession, setInviteSession } from "@/lib/invite/session";
 import {
   createInviteGuest,
   findGuestByNickname,
-  findPlanByPublicToken,
   verifyGuestPin
 } from "@/lib/invite/server";
-import {
-  findActiveInviteShareTokenForPlan,
-  validateInviteShareTokenParam
-} from "@/lib/invite/shareTokens";
 
 export const runtime = "nodejs";
 
 type RouteContext = {
-  params: Promise<{ publicToken: string }>;
+  params: Promise<{ inviteCode: string }>;
 };
 
 type EntryRequest = {
@@ -23,51 +19,19 @@ type EntryRequest = {
 };
 
 export async function POST(request: NextRequest, context: RouteContext) {
-  const { publicToken } = await context.params;
-  const shareTokenValidation = validateInviteShareTokenParam(
-    request.nextUrl.searchParams.get("share")
-  );
-
-  if (!shareTokenValidation.ok) {
-    return NextResponse.json(
-      { message: shareTokenValidation.message },
-      { status: 400 }
-    );
-  }
+  const { inviteCode } = await context.params;
 
   try {
-    const plan = await findPlanByPublicToken(publicToken);
+    const invite = await findActiveInviteByCode(inviteCode);
 
-    if (!plan) {
-      return NextResponse.json(
-        { message: "URLが正しくないか、利用できません。" },
-        { status: 404 }
-      );
+    if (!invite.ok) {
+      return NextResponse.json({ message: invite.message }, { status: invite.status });
     }
 
-    if (!plan.isActive) {
-      return NextResponse.json(
-        { message: "このプランは現在利用できません。" },
-        { status: 410 }
-      );
-    }
+    if (invite.plan.passwordHash) {
+      const passwordSession = readInvitePasswordSession(request, inviteCode);
 
-    const shareToken = await findActiveInviteShareTokenForPlan({
-      plan,
-      token: shareTokenValidation.token
-    });
-
-    if (!shareToken) {
-      return NextResponse.json(
-        { message: "配信用URLが正しくありません。" },
-        { status: 404 }
-      );
-    }
-
-    if (plan.passwordHash) {
-      const passwordSession = readInvitePasswordSession(request, publicToken);
-
-      if (!passwordSession || passwordSession.planId !== plan.id) {
+      if (!passwordSession || passwordSession.planId !== invite.plan.id) {
         return NextResponse.json(
           { message: "アクセスコードを入力してください。" },
           { status: 401 }
@@ -83,15 +47,15 @@ export async function POST(request: NextRequest, context: RouteContext) {
     }
 
     const existingGuest = await findGuestByNickname({
-      ownerUid: plan.ownerUid,
-      planId: plan.id,
+      ownerUid: invite.plan.ownerUid,
+      planId: invite.plan.id,
       nickname: validation.nickname
     });
     const guest = existingGuest
       ? existingGuest
       : await createInviteGuest({
-          ownerUid: plan.ownerUid,
-          planId: plan.id,
+          ownerUid: invite.plan.ownerUid,
+          planId: invite.plan.id,
           nickname: validation.nickname,
           pin: validation.pin
         });
@@ -113,9 +77,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
     });
     setInviteSession(response, {
       kind: "invite",
-      publicToken,
-      planId: plan.id,
-      ownerUid: plan.ownerUid,
+      inviteCode,
+      planId: invite.plan.id,
+      ownerUid: invite.plan.ownerUid,
       guestId: guest.id,
       nickname: guest.nickname
     });

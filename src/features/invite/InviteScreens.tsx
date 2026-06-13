@@ -74,11 +74,9 @@ const inviteCredentialMaxAgeMs = 1000 * 60 * 60 * 24 * 180;
 const inviteCredentialMaxEntries = 20;
 
 export function InviteStartScreen({
-  publicToken,
-  shareToken
+  inviteCode
 }: {
-  publicToken: string;
-  shareToken: string;
+  inviteCode: string;
 }) {
   const router = useRouter();
   const [plan, setPlan] = useState<PublicPlan | null>(null);
@@ -89,13 +87,12 @@ export function InviteStartScreen({
 
   useEffect(() => {
     loadPublicPlan({
-      publicToken,
-      shareToken,
+      inviteCode,
       onPlan: (nextPlan) => {
         setPlan(nextPlan);
 
         if (nextPlan?.hasPassword) {
-          const cachedCredential = readCachedInviteCredential(publicToken, nextPlan);
+          const cachedCredential = readCachedInviteCredential(inviteCode, nextPlan);
 
           if (cachedCredential?.accessCode) {
             setAccessCode((currentAccessCode) => currentAccessCode || cachedCredential.accessCode || "");
@@ -105,7 +102,7 @@ export function InviteStartScreen({
       onError: setError,
       onFinally: () => setIsLoading(false)
     });
-  }, [publicToken, shareToken]);
+  }, [inviteCode]);
 
   async function handlePasswordSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -119,7 +116,7 @@ export function InviteStartScreen({
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(buildInviteApiPath(publicToken, "password", shareToken), {
+      const response = await fetch(buildInviteApiPath(inviteCode, "password"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ accessCode: accessCode.trim() })
@@ -132,13 +129,13 @@ export function InviteStartScreen({
       }
 
       saveCachedInviteCredential({
-        publicToken,
+        inviteCode,
         plan,
         credential: {
           accessCode: accessCode.trim()
         }
       });
-      router.push(buildInvitePagePath(publicToken, "entry", shareToken));
+      router.push(buildInvitePagePath(inviteCode, "entry"));
     } catch {
       setError("通信に失敗しました。時間をおいて再度お試しください。");
     } finally {
@@ -204,7 +201,7 @@ export function InviteStartScreen({
           <Link
             className="primary-button button-link full-width top-message"
             data-tooltip="ニックネームとPINの入力へ進む"
-            href={buildInvitePagePath(publicToken, "entry", shareToken)}
+            href={buildInvitePagePath(inviteCode, "entry")}
           >
             出欠入力へ進む
           </Link>
@@ -215,11 +212,9 @@ export function InviteStartScreen({
 }
 
 export function InviteEntryScreen({
-  publicToken,
-  shareToken
+  inviteCode
 }: {
-  publicToken: string;
-  shareToken: string;
+  inviteCode: string;
 }) {
   const router = useRouter();
   const [plan, setPlan] = useState<PublicPlan | null>(null);
@@ -231,13 +226,12 @@ export function InviteEntryScreen({
 
   useEffect(() => {
     loadPublicPlan({
-      publicToken,
-      shareToken,
+      inviteCode,
       onPlan: (nextPlan) => {
         setPlan(nextPlan);
 
         if (nextPlan) {
-          const cachedCredential = readCachedInviteCredential(publicToken, nextPlan);
+          const cachedCredential = readCachedInviteCredential(inviteCode, nextPlan);
 
           if (cachedCredential?.nickname) {
             setNickname((currentNickname) => currentNickname || cachedCredential.nickname || "");
@@ -251,7 +245,7 @@ export function InviteEntryScreen({
       onError: setError,
       onFinally: () => setIsLoading(false)
     });
-  }, [publicToken, shareToken]);
+  }, [inviteCode]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -260,14 +254,14 @@ export function InviteEntryScreen({
 
     try {
       if (plan?.hasPassword) {
-        const cachedCredential = readCachedInviteCredential(publicToken, plan);
+        const cachedCredential = readCachedInviteCredential(inviteCode, plan);
 
         if (cachedCredential?.accessCode) {
-          await verifyInviteAccessCode(publicToken, cachedCredential.accessCode, shareToken);
+          await verifyInviteAccessCode(inviteCode, cachedCredential.accessCode);
         }
       }
 
-      const response = await fetch(buildInviteApiPath(publicToken, "entry", shareToken), {
+      const response = await fetch(buildInviteApiPath(inviteCode, "entry"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ nickname, pin })
@@ -280,14 +274,14 @@ export function InviteEntryScreen({
       }
 
       saveCachedInviteCredential({
-        publicToken,
+        inviteCode,
         plan,
         credential: {
           nickname: nickname.trim(),
           pin: pin.trim()
         }
       });
-      router.push(buildInvitePagePath(publicToken, "responses", shareToken));
+      router.push(buildInvitePagePath(inviteCode, "responses"));
     } catch {
       setError("通信に失敗しました。時間をおいて再度お試しください。");
     } finally {
@@ -368,11 +362,9 @@ export function InviteEntryScreen({
 }
 
 export function InviteResponsesScreen({
-  publicToken,
-  shareToken
+  inviteCode
 }: {
-  publicToken: string;
-  shareToken: string;
+  inviteCode: string;
 }) {
   const router = useRouter();
   const [detail, setDetail] = useState<InviteResponseDetail | null>(null);
@@ -386,7 +378,7 @@ export function InviteResponsesScreen({
 
     async function loadResponseDetail() {
       try {
-        const response = await fetch(buildInviteApiPath(publicToken, "responses", shareToken));
+        const response = await fetch(buildInviteApiPath(inviteCode, "responses"));
         const result = (await response.json().catch(() => null)) as
           | (InviteResponseDetail & { message?: string })
           | null;
@@ -427,7 +419,7 @@ export function InviteResponsesScreen({
     return () => {
       isActive = false;
     };
-  }, [publicToken, shareToken]);
+  }, [inviteCode]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -456,7 +448,7 @@ export function InviteResponsesScreen({
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(buildInviteApiPath(publicToken, "responses", shareToken), {
+      const response = await fetch(buildInviteApiPath(inviteCode, "responses"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -474,7 +466,7 @@ export function InviteResponsesScreen({
         return;
       }
 
-      router.push(buildInvitePagePath(publicToken, "complete", shareToken));
+      router.push(buildInvitePagePath(inviteCode, "complete"));
     } catch {
       setError("保存に失敗しました。時間をおいて再度お試しください。");
     } finally {
@@ -492,7 +484,7 @@ export function InviteResponsesScreen({
         title="出欠入力を表示できません"
         eyebrow="Error"
         message={error}
-        actionHref={`/invite/${publicToken}/entry`}
+        actionHref={buildInvitePagePath(inviteCode, "entry")}
         actionLabel="ニックネームとPINを入力する"
       />
     );
@@ -536,7 +528,7 @@ export function InviteResponsesScreen({
           <Link
             className="secondary-button button-link"
             data-tooltip="ニックネームとPIN入力へ戻る"
-            href={buildInvitePagePath(publicToken, "entry", shareToken)}
+            href={buildInvitePagePath(inviteCode, "entry")}
           >
             戻る
           </Link>
@@ -555,11 +547,9 @@ export function InviteResponsesScreen({
 }
 
 export function InviteCompleteScreen({
-  publicToken,
-  shareToken
+  inviteCode
 }: {
-  publicToken: string;
-  shareToken: string;
+  inviteCode: string;
 }) {
   const router = useRouter();
   const [detail, setDetail] = useState<InviteResponseDetail | null>(null);
@@ -569,7 +559,7 @@ export function InviteCompleteScreen({
   useEffect(() => {
     async function loadCompleteDetail() {
       try {
-        const response = await fetch(buildInviteApiPath(publicToken, "responses", shareToken));
+        const response = await fetch(buildInviteApiPath(inviteCode, "responses"));
         const result = (await response.json().catch(() => null)) as
           | (InviteResponseDetail & { message?: string })
           | null;
@@ -588,7 +578,7 @@ export function InviteCompleteScreen({
     }
 
     loadCompleteDetail();
-  }, [publicToken, shareToken]);
+  }, [inviteCode]);
 
   if (isLoading) {
     return <InviteLoading />;
@@ -600,7 +590,7 @@ export function InviteCompleteScreen({
         title="入力内容を表示できません"
         eyebrow="Error"
         message={error}
-        actionHref={buildInvitePagePath(publicToken, "entry", shareToken)}
+        actionHref={buildInvitePagePath(inviteCode, "entry")}
         actionLabel="ニックネームとPINを入力する"
       />
     );
@@ -610,10 +600,10 @@ export function InviteCompleteScreen({
 
   function handleContinueEntry() {
     clearCachedInviteGuestCredential({
-      publicToken,
+      inviteCode,
       plan: completeDetail.plan
     });
-    router.push(buildInvitePagePath(publicToken, "entry", shareToken));
+    router.push(buildInvitePagePath(inviteCode, "entry"));
   }
 
   return (
@@ -803,20 +793,18 @@ function InviteMessage({
 }
 
 async function loadPublicPlan({
-  publicToken,
-  shareToken,
+  inviteCode,
   onPlan,
   onError,
   onFinally
 }: {
-  publicToken: string;
-  shareToken: string;
+  inviteCode: string;
   onPlan: (plan: PublicPlan | null) => void;
   onError: (message: string) => void;
   onFinally: () => void;
 }) {
   try {
-    const response = await fetch(buildInviteApiPath(publicToken, "", shareToken));
+    const response = await fetch(buildInviteApiPath(inviteCode, ""));
     const result = (await response.json().catch(() => null)) as
       | { plan?: PublicPlan; message?: string }
       | null;
@@ -836,11 +824,10 @@ async function loadPublicPlan({
 }
 
 async function verifyInviteAccessCode(
-  publicToken: string,
-  accessCode: string,
-  shareToken: string
+  inviteCode: string,
+  accessCode: string
 ) {
-  const response = await fetch(buildInviteApiPath(publicToken, "password", shareToken), {
+  const response = await fetch(buildInviteApiPath(inviteCode, "password"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ accessCode })
@@ -850,34 +837,22 @@ async function verifyInviteAccessCode(
 }
 
 function buildInvitePagePath(
-  publicToken: string,
-  segment: "" | "entry" | "responses" | "complete",
-  shareToken: string
+  inviteCode: string,
+  segment: "" | "entry" | "responses" | "complete"
 ) {
-  const path = segment ? `/invite/${publicToken}/${segment}` : `/invite/${publicToken}`;
-
-  return appendShareQuery(path, shareToken);
+  return segment ? `/i/${inviteCode}/${segment}` : `/i/${inviteCode}`;
 }
 
 function buildInviteApiPath(
-  publicToken: string,
-  endpoint: "" | "password" | "entry" | "responses",
-  shareToken: string
+  inviteCode: string,
+  endpoint: "" | "password" | "entry" | "responses"
 ) {
-  const path = endpoint ? `/api/invite/${publicToken}/${endpoint}` : `/api/invite/${publicToken}`;
-
-  return appendShareQuery(path, shareToken);
+  return endpoint ? `/api/i/${inviteCode}/${endpoint}` : `/api/i/${inviteCode}`;
 }
 
-function appendShareQuery(path: string, shareToken: string) {
-  const token = shareToken.trim();
-
-  return token ? `${path}?share=${encodeURIComponent(token)}` : path;
-}
-
-function readCachedInviteCredential(publicToken: string, plan: PublicPlan) {
+function readCachedInviteCredential(inviteCode: string, plan: PublicPlan) {
   const store = readCachedInviteCredentialStore();
-  const tokenCredential = store.byToken[publicToken];
+  const tokenCredential = store.byToken[inviteCode];
 
   if (isFreshCachedInviteCredential(tokenCredential)) {
     return tokenCredential;
@@ -893,17 +868,17 @@ function readCachedInviteCredential(publicToken: string, plan: PublicPlan) {
 }
 
 function saveCachedInviteCredential({
-  publicToken,
+  inviteCode,
   plan,
   credential
 }: {
-  publicToken: string;
+  inviteCode: string;
   plan: PublicPlan | null;
   credential: Partial<Pick<CachedInviteCredential, "accessCode" | "nickname" | "pin">>;
 }) {
   const store = readCachedInviteCredentialStore();
   const existingCredential =
-    store.byToken[publicToken] ??
+    store.byToken[inviteCode] ??
     (plan ? store.byPlan[buildPlanCredentialKey(plan)] : undefined) ??
     {};
   const nextCredential: CachedInviteCredential = {
@@ -914,7 +889,7 @@ function saveCachedInviteCredential({
     updatedAt: Date.now()
   };
 
-  store.byToken[publicToken] = nextCredential;
+  store.byToken[inviteCode] = nextCredential;
 
   if (plan) {
     store.byPlan[buildPlanCredentialKey(plan)] = nextCredential;
@@ -924,19 +899,19 @@ function saveCachedInviteCredential({
 }
 
 function clearCachedInviteGuestCredential({
-  publicToken,
+  inviteCode,
   plan
 }: {
-  publicToken: string;
+  inviteCode: string;
   plan: PublicPlan;
 }) {
   const store = readCachedInviteCredentialStore();
   const planKey = buildPlanCredentialKey(plan);
-  const tokenCredential = store.byToken[publicToken];
+  const tokenCredential = store.byToken[inviteCode];
   const planCredential = store.byPlan[planKey];
 
   if (tokenCredential) {
-    store.byToken[publicToken] = omitGuestCredential(tokenCredential);
+    store.byToken[inviteCode] = omitGuestCredential(tokenCredential);
   }
 
   if (planCredential) {

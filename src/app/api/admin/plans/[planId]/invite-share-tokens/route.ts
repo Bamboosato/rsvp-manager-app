@@ -80,14 +80,14 @@ export async function POST(request: NextRequest, context: RouteContext) {
       );
     }
 
-    const shareToken = await createInviteShareToken({
+    const inviteCode = await createInviteShareToken({
       ownerUid: authUser.uid,
       planId,
       publicToken,
       eventIds: validation.eventIds
     });
 
-    return NextResponse.json({ shareToken }, { status: 201 });
+    return NextResponse.json({ inviteCode }, { status: 201 });
   } catch (error) {
     console.error("Failed to create invite share token.", error);
     return NextResponse.json(

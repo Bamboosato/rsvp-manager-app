@@ -1,18 +1,25 @@
-import { randomBytes } from "crypto";
+import { randomInt } from "crypto";
 import { Timestamp, type DocumentData } from "firebase-admin/firestore";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin";
 import type { InvitePlan } from "./server";
 
 const inviteShareTokensCollection = "inviteShareTokens";
-const inviteShareTokenPattern = /^[A-Za-z0-9_-]{24,120}$/;
+const inviteCodeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const inviteCodeLength = 6;
+const inviteCodePattern = /^[A-Z2-9]{6}$/;
+const maxInviteCodeCreateAttempts = 12;
 
 export type InviteShareToken = {
   id: string;
   token: string;
+  inviteCode: string;
   publicToken: string;
   planId: string;
   ownerUid: string;
   eventIds: string[];
+  participantId: string | null;
+  expiresAt: string | null;
+  status: "active" | "revoked";
   isActive: boolean;
   createdAt: string | null;
   updatedAt: string | null;
@@ -23,13 +30,13 @@ export type InviteShareToken = {
 export function validateInviteShareTokenParam(value: string | null):
   | { ok: true; token: string }
   | { ok: false; message: string } {
-  const token = value?.trim() ?? "";
+  const token = value?.trim().toUpperCase() ?? "";
 
   if (!token) {
     return { ok: false, message: "配信用URLが正しくありません。" };
   }
 
-  if (!inviteShareTokenPattern.test(token)) {
+  if (!inviteCodePattern.test(token)) {
     return { ok: false, message: "配信用URLが正しくありません。" };
   }
 
@@ -48,23 +55,41 @@ export async function createInviteShareToken({
   eventIds: string[];
 }) {
   const db = getFirebaseAdminFirestore();
-  const token = randomBytes(24).toString("base64url");
   const now = Timestamp.now();
 
-  await db.collection(inviteShareTokensCollection).doc(token).create({
-    token,
-    publicToken,
-    planId,
-    ownerUid,
-    eventIds,
-    isActive: true,
-    createdAt: now,
-    updatedAt: now,
-    revokedAt: null,
-    revokedReason: null
-  });
+  for (let attempt = 0; attempt < maxInviteCodeCreateAttempts; attempt += 1) {
+    const inviteCode = generateInviteCode();
 
-  return token;
+    try {
+      await db.collection(inviteShareTokensCollection).doc(inviteCode).create({
+        token: inviteCode,
+        inviteCode,
+        publicToken,
+        planId,
+        ownerUid,
+        eventId: eventIds[0] ?? null,
+        eventIds,
+        participantId: null,
+        expiresAt: null,
+        status: "active",
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+        revokedAt: null,
+        revokedReason: null
+      });
+
+      return inviteCode;
+    } catch (error) {
+      if (isAlreadyExistsError(error)) {
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  throw new Error("Failed to generate a unique invite code.");
 }
 
 export async function findActiveInviteShareTokenForPlan({
@@ -98,6 +123,35 @@ export async function findActiveInviteShareTokenForPlan({
     shareToken.publicToken !== plan.publicToken ||
     shareToken.eventIds.length === 0
   ) {
+    return null;
+  }
+
+  return shareToken;
+}
+
+export async function findActiveInviteShareTokenByCode(inviteCode: string) {
+  const validation = validateInviteShareTokenParam(inviteCode);
+
+  if (!validation.ok) {
+    return null;
+  }
+
+  const document = await getFirebaseAdminFirestore()
+    .collection(inviteShareTokensCollection)
+    .doc(validation.token)
+    .get();
+
+  if (!document.exists) {
+    return null;
+  }
+
+  const shareToken = mapInviteShareToken(document.id, document.data() ?? {});
+
+  if (!shareToken.isActive || shareToken.status !== "active" || shareToken.eventIds.length === 0) {
+    return null;
+  }
+
+  if (shareToken.expiresAt && Date.parse(shareToken.expiresAt) <= Date.now()) {
     return null;
   }
 
@@ -169,12 +223,18 @@ function mapInviteShareToken(id: string, data: DocumentData): InviteShareToken {
   return {
     id,
     token: String(data.token ?? id),
+    inviteCode: String(data.inviteCode ?? data.token ?? id),
     publicToken: String(data.publicToken ?? ""),
     planId: String(data.planId ?? ""),
     ownerUid: String(data.ownerUid ?? ""),
     eventIds: Array.isArray(data.eventIds)
       ? data.eventIds.filter((eventId): eventId is string => typeof eventId === "string")
-      : [],
+      : typeof data.eventId === "string"
+        ? [data.eventId]
+        : [],
+    participantId: typeof data.participantId === "string" ? data.participantId : null,
+    expiresAt: timestampToIsoString(data.expiresAt),
+    status: data.status === "revoked" || data.isActive === false ? "revoked" : "active",
     isActive: data.isActive === true,
     createdAt: timestampToIsoString(data.createdAt),
     updatedAt: timestampToIsoString(data.updatedAt),
@@ -189,4 +249,23 @@ function timestampToIsoString(value: unknown) {
   }
 
   return null;
+}
+
+function generateInviteCode() {
+  let inviteCode = "";
+
+  for (let index = 0; index < inviteCodeLength; index += 1) {
+    inviteCode += inviteCodeAlphabet[randomInt(inviteCodeAlphabet.length)];
+  }
+
+  return inviteCode;
+}
+
+function isAlreadyExistsError(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error.code === 6 || error.code === "already-exists")
+  );
 }

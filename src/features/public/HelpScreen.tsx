@@ -99,7 +99,7 @@ const troubleItems = [
 
 const inviteMessageLines = [
   "7月練習会",
-  "https://rsvphub.bamboosato.com/invite/xxxxxxxxxxxx",
+  "https://rsvphub.bamboosato.com/i/A7X9K2",
   "",
   "ニックネームと4桁のPINを入力して、各日程の出欠を回答してください。",
   "再編集するときも同じニックネームとPINを使います。"
@@ -446,7 +446,7 @@ function HelpScreenMock({ variant }: { variant: HelpScreenMockVariant }) {
         </div>
         <div className="help-mock-message">
           <strong>7月練習会</strong>
-          <span>https://rsvphub.bamboosato.com/invite/...</span>
+          <span>https://rsvphub.bamboosato.com/i/...</span>
         </div>
       </div>
     );
