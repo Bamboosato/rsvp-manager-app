@@ -2118,7 +2118,7 @@ th {
 
 .line-friend-name-cell,
 .line-friend-select-main {
-  grid-template-columns: 40px minmax(0, 1fr);
+  grid-template-columns: 40px minmax(9.5rem, 9.5rem);
   min-width: 0;
 }
 
@@ -2133,6 +2133,7 @@ th {
 .line-friend-name-cell span {
   display: grid;
   gap: 2px;
+  width: 9.5rem;
   min-width: 0;
 }
 
@@ -2141,6 +2142,7 @@ th {
   color: var(--muted);
   font-size: 0.75rem;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .line-friend-select-memo {
