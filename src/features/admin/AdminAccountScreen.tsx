@@ -330,8 +330,8 @@ function AdminAccountSettings() {
             </div>
           </div>
 
-          <div className="table-wrap">
-            <table>
+          <div className="table-wrap line-friends-table-wrap">
+            <table className="line-friends-table">
               <thead>
                 <tr>
                   <th>友だち</th>
@@ -358,14 +358,14 @@ function AdminAccountSettings() {
 
                     return (
                       <tr key={friend.id}>
-                        <td className="line-friend-name-cell">
+                        <td className="line-friend-name-cell" data-label="友だち">
                           <LineFriendAvatar friend={friend} />
                           <span>
                             <strong>{friend.displayName}</strong>
                             <small>{formatDateTime(friend.registeredAt)}</small>
                           </span>
                         </td>
-                        <td>
+                        <td data-label="メモ">
                           <input
                             className="table-input"
                             disabled={isSaving}
@@ -378,7 +378,7 @@ function AdminAccountSettings() {
                             value={draft.memo}
                           />
                         </td>
-                        <td>
+                        <td data-label="配信対象">
                           <label className="checkbox-field">
                             <input
                               checked={draft.isDeliverable}
@@ -393,12 +393,12 @@ function AdminAccountSettings() {
                             <span>配信対象</span>
                           </label>
                         </td>
-                        <td>
+                        <td data-label="状態">
                           <span className={friend.isFriend ? "status-badge" : "status-badge muted"}>
                             {friend.isFriend ? "友だち" : "ブロック"}
                           </span>
                         </td>
-                        <td className="action-column two-actions">
+                        <td className="action-column two-actions" data-label="操作">
                           <div className="row-actions">
                             <button
                               className="secondary-button compact-button"
@@ -446,15 +446,22 @@ function AdminAccountSettings() {
 }
 
 function LineFriendAvatar({ friend }: { friend: AdminLineFriend }) {
-  if (friend.pictureUrl) {
+  const [imageIndex, setImageIndex] = useState(0);
+  const imageUrls = [friend.pictureUrl, friend.linePictureUrl].filter(
+    (url): url is string => Boolean(url)
+  );
+  const imageUrl = imageUrls[imageIndex] ?? null;
+
+  if (imageUrl) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
         alt=""
         className="line-friend-avatar"
         height={40}
+        onError={() => setImageIndex((currentIndex) => currentIndex + 1)}
         referrerPolicy="no-referrer"
-        src={friend.pictureUrl}
+        src={imageUrl}
         width={40}
       />
     );

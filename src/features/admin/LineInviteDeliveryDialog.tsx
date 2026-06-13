@@ -257,15 +257,22 @@ export function LineInviteDeliveryDialog({
 }
 
 function LineFriendAvatar({ friend }: { friend: AdminLineFriend }) {
-  if (friend.pictureUrl) {
+  const [imageIndex, setImageIndex] = useState(0);
+  const imageUrls = [friend.pictureUrl, friend.linePictureUrl].filter(
+    (url): url is string => Boolean(url)
+  );
+  const imageUrl = imageUrls[imageIndex] ?? null;
+
+  if (imageUrl) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
         alt=""
         className="line-friend-avatar"
         height={40}
+        onError={() => setImageIndex((currentIndex) => currentIndex + 1)}
         referrerPolicy="no-referrer"
-        src={friend.pictureUrl}
+        src={imageUrl}
         width={40}
       />
     );
