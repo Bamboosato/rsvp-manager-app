@@ -2186,30 +2186,31 @@ th {
 }
 
 .line-friends-table {
-  min-width: 860px;
+  width: max-content;
+  min-width: 800px;
   table-layout: fixed;
 }
 
 .line-friends-table th:nth-child(1),
 .line-friends-table td:nth-child(1) {
-  width: 34%;
+  width: 13rem;
 }
 
 .line-friends-table th:nth-child(2),
 .line-friends-table td:nth-child(2) {
-  width: 28%;
+  width: 18rem;
 }
 
 .line-friends-table th:nth-child(3),
 .line-friends-table td:nth-child(3),
 .line-friends-table th:nth-child(4),
 .line-friends-table td:nth-child(4) {
-  width: 12%;
+  width: 7.5rem;
 }
 
 .line-friends-table th:nth-child(5),
 .line-friends-table td:nth-child(5) {
-  width: 14%;
+  width: 10.5rem;
 }
 
 .line-friends-table .table-input {
