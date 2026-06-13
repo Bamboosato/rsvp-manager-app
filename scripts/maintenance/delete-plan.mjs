@@ -32,12 +32,21 @@ async function main() {
   const db = getFirestoreClient();
   const planRef = db.collection("plans").doc(options.planId);
 
-  const [planSnapshot, eventSnapshots, guestSnapshots, responseSnapshots] =
+  const [
+    planSnapshot,
+    eventSnapshots,
+    guestSnapshots,
+    responseSnapshots,
+    inviteShareTokenSnapshots,
+    lineMessageDeliverySnapshots
+  ] =
     await Promise.all([
       planRef.get(),
       getDocumentsByPlanId(db, "events", options.planId),
       getDocumentsByPlanId(db, "guests", options.planId),
-      getDocumentsByPlanId(db, "responses", options.planId)
+      getDocumentsByPlanId(db, "responses", options.planId),
+      getDocumentsByPlanId(db, "inviteShareTokens", options.planId),
+      getDocumentsByPlanId(db, "lineMessageDeliveries", options.planId)
     ]);
 
   const planSnapshots = planSnapshot.exists ? [planSnapshot] : [];
@@ -46,7 +55,9 @@ async function main() {
     planSnapshots,
     eventSnapshots,
     guestSnapshots,
-    responseSnapshots
+    responseSnapshots,
+    inviteShareTokenSnapshots,
+    lineMessageDeliverySnapshots
   });
   const auditLogSnapshots = await getAuditLogsByTargetIds(db, targetIds);
   const planData = planSnapshot.exists ? planSnapshot.data() : null;
@@ -59,6 +70,8 @@ async function main() {
     eventSnapshots,
     guestSnapshots,
     responseSnapshots,
+    inviteShareTokenSnapshots,
+    lineMessageDeliverySnapshots,
     auditLogSnapshots,
     includeAuditLogs: options.includeAuditLogs
   });
@@ -79,6 +92,8 @@ async function main() {
   await deleteSnapshots(db, "responses", responseSnapshots);
   await deleteSnapshots(db, "guests", guestSnapshots);
   await deleteSnapshots(db, "events", eventSnapshots);
+  await deleteSnapshots(db, "inviteShareTokens", inviteShareTokenSnapshots);
+  await deleteSnapshots(db, "lineMessageDeliveries", lineMessageDeliverySnapshots);
 
   if (options.includeAuditLogs) {
     await deleteSnapshots(db, "auditLogs", auditLogSnapshots);
@@ -207,7 +222,9 @@ function collectAuditTargetIds({
   planSnapshots,
   eventSnapshots,
   guestSnapshots,
-  responseSnapshots
+  responseSnapshots,
+  inviteShareTokenSnapshots,
+  lineMessageDeliverySnapshots
 }) {
   const targetIds = new Set([planId]);
 
@@ -215,15 +232,34 @@ function collectAuditTargetIds({
     ...planSnapshots,
     ...eventSnapshots,
     ...guestSnapshots,
-    ...responseSnapshots
+    ...responseSnapshots,
+    ...inviteShareTokenSnapshots,
+    ...lineMessageDeliverySnapshots
   ]) {
     targetIds.add(snapshot.id);
 
     const data = snapshot.data();
 
-    for (const fieldName of ["planId", "eventId", "guestId", "responseId"]) {
+    for (const fieldName of [
+      "planId",
+      "eventId",
+      "guestId",
+      "responseId",
+      "inviteCode",
+      "shareToken",
+      "friendId",
+      "lineUserId"
+    ]) {
       if (typeof data[fieldName] === "string") {
         targetIds.add(data[fieldName]);
+      }
+    }
+
+    if (Array.isArray(data.eventIds)) {
+      for (const eventId of data.eventIds) {
+        if (typeof eventId === "string") {
+          targetIds.add(eventId);
+        }
       }
     }
   }
@@ -257,6 +293,8 @@ function printSummary({
   eventSnapshots,
   guestSnapshots,
   responseSnapshots,
+  inviteShareTokenSnapshots,
+  lineMessageDeliverySnapshots,
   auditLogSnapshots,
   includeAuditLogs
 }) {
@@ -280,6 +318,8 @@ function printSummary({
   console.log(`- events: ${eventSnapshots.length}`);
   console.log(`- guests: ${guestSnapshots.length}`);
   console.log(`- responses: ${responseSnapshots.length}`);
+  console.log(`- inviteShareTokens: ${inviteShareTokenSnapshots.length}`);
+  console.log(`- lineMessageDeliveries: ${lineMessageDeliverySnapshots.length}`);
   console.log(
     `- auditLogs: ${auditLogSnapshots.length} (${includeAuditLogs ? "delete" : "keep"})`
   );
@@ -289,6 +329,8 @@ function printSummary({
     eventSnapshots.length +
     guestSnapshots.length +
     responseSnapshots.length +
+    inviteShareTokenSnapshots.length +
+    lineMessageDeliverySnapshots.length +
     (includeAuditLogs ? auditLogSnapshots.length : 0);
 
   console.log(`Total documents to delete: ${totalDeleteCount}`);
@@ -341,7 +383,8 @@ Options:
   --help                  Show this help.
 
 Safety:
-  The script deletes responses, guests, events, and then the plan.
+  The script deletes responses, guests, events, inviteShareTokens,
+  lineMessageDeliveries, and then the plan.
   auditLogs are kept unless --include-audit-logs is specified.
   Active plans require --force-active when using --execute.`);
 }
