@@ -64,7 +64,35 @@ npm run dev
 npm run typecheck
 npm run lint
 npm run build
+npm test
+npm run test:security
+npm run audit:security
+npm run test:sdk
+npm run build:ci
+npm run test:e2e -- --workers=1
 ```
+
+## CI and Dependency Security
+
+GitHub Actions checks main pull requests and pushes with Node.js 24: lint,
+typecheck, unit/API tests, build, Chromium E2E, dependency audits, and Firebase
+Web/Admin SDK smoke tests against local Auth/Firestore/Storage emulators.
+A weekly audit runs on Mondays at 07:00 JST. Dependabot proposes weekly npm and
+GitHub Actions updates; updates are not automatically merged.
+
+Any production vulnerability fails the audit. Development vulnerabilities require
+an exact, time-limited exception; critical vulnerabilities cannot be excepted.
+Audit failures and malformed responses fail the check too. JSON reports and
+failure evidence are retained for 14 days.
+
+Node.js 24 is recommended (minimum 22.12); emulator checks require Java 21.
+E2E uses a dummy Firebase build and mocked APIs, with one Chromium worker.
+Use `npm run build:ci` before E2E, and install Chromium with
+`npx --no-install playwright install chromium`. Do not deploy the dummy build.
+
+See [CI operations](docs/ci-operations.md) for dependency overrides, the current
+development exception expiry, and required checks. See
+[test scope and prerequisites](tests/README.md) for coverage and limitations.
 
 ## Firebase
 
