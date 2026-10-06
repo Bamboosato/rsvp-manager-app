@@ -11,7 +11,7 @@
 | Firebase SDK smoke | 固定版 Firebase CLI と Java 21、Auth/Firestore/Storage emulator による SDK 互換性・Rules 拒否確認 |
 
 毎週月曜07:00 JST の定期実行は `Dependency security` のみ。定期実行と手動実行はワークフローが main に取り込まれてから使用できる。
-権限は `contents: read`。Actions の参照はコミット SHA 固定、Node は24系、Firebase CLI は15.17.0固定。
+権限は `contents: read`。Actions の参照はコミット SHA 固定、Node は24系、npm は11.19.0、Firebase CLI は15.17.0固定。
 実行ログに Node/npm/Java の実際の版を残す。ダミー Firebase 値を使用し、管理秘密鍵・LINE アクセストークンを要求しない。
 Dependabot は npm と Actions の週次更新 PR を作成する。GitHub の自動セキュリティ修正も確認時点で有効。自動マージは設定しない。
 

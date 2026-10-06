@@ -85,7 +85,7 @@ an exact, time-limited exception; critical vulnerabilities cannot be excepted.
 Audit failures and malformed responses fail the check too. JSON reports and
 failure evidence are retained for 14 days.
 
-Node.js 24 is recommended (minimum 22.12); emulator checks require Java 21.
+Node.js 24 and npm 11.19.0 are recommended (minimum Node 22.12); emulator checks require Java 21.
 E2E uses a dummy Firebase build and mocked APIs, with one Chromium worker.
 Use `npm run build:ci` before E2E, and install Chromium with
 `npx --no-install playwright install chromium`. Do not deploy the dummy build.

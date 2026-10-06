@@ -17,6 +17,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  NPM_VERSION: '11.19.0'
   NEXT_PUBLIC_FIREBASE_API_KEY: ci-dummy-key
   NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: demo-rsvp-ci.firebaseapp.com
   NEXT_PUBLIC_FIREBASE_PROJECT_ID: demo-rsvp-ci
@@ -39,6 +40,7 @@ jobs:
         with:
           node-version: '24'
           cache: npm
+      - run: npm install --global npm@${NPM_VERSION} --no-audit
       - run: node --version && npm --version
       - run: npm ci --no-audit
       - run: npm run lint
@@ -69,6 +71,7 @@ jobs:
         with:
           node-version: '24'
           cache: npm
+      - run: npm install --global npm@${NPM_VERSION} --no-audit
       - run: node --version && npm --version
       - run: npm ci --no-audit
       - run: npm run test:security
@@ -98,6 +101,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+      - run: npm install --global npm@${NPM_VERSION} --no-audit
       - run: node --version && npm --version && java -version
       - run: npm ci --no-audit
       - run: npm run test:sdk

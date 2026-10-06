@@ -22,9 +22,12 @@ SDK smoke の Admin 初期化はテスト専用であり、実サービスアカ
 
 ## 前提と手順
 
-Node.js 24 推奨（テストツールの最低要件は22.12）。Java 21 を emulator 用に用意する。
+Node.js 24 と npm 11.19.0 推奨（テストツールの最低Node要件は22.12）。Java 21 を emulator 用に用意する。
 `npm ci --no-audit` で lockfile どおりに準備する。作業中の別プロセスや既存 emulator を終了し、8080/9099/9199/3100 を空ける。
 同じ emulator / ブラウザー環境に対してスクリプトを並列実行しない。CI のジョブは別 runner で独立する。
+
+npm の版が異なる場合は、グローバル環境を変更せず `npx --yes npm@11.19.0 ci --no-audit` で CI と同じ版を使える。
+lockfile 更新も `npx --yes npm@11.19.0 install --package-lock-only --ignore-scripts --no-audit` を使い、クリーンな `npm ci` と Linux CI の両方を確認する。Windows/npm 11.6での更新が成功しても、CIのnpm 11.19がoptional依存の不足を検出したため、npm版も揃えて検証する。
 
 ```bash
 npm run test:security
