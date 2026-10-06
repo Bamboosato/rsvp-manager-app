@@ -12,6 +12,10 @@
 
 ## Setup
 
+Use Node.js 22 or later. Firebase Admin SDK 14 and its Firestore/Storage
+dependencies require Node.js 22 or later; use a supported Node.js version in
+both local development and the deployment environment.
+
 ```bash
 npm install
 ```
