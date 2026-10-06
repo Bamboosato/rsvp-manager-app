@@ -36,3 +36,12 @@ screenshot/
 
 # generated artifacts
 outputs/
+
+# CI/test evidence (never commit generated reports or emulator data)
+.security-audit/
+playwright-report/
+test-results/
+output/playwright/
+.ci-java-tmp/
+*-debug.log
+*-debug.*.log

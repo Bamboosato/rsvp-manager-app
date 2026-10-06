@@ -1,0 +1,118 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: '0 22 * * 0' # Monday 07:00 JST; dependency audit only
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  NPM_VERSION: '11.19.0'
+  NEXT_PUBLIC_FIREBASE_API_KEY: ci-dummy-key
+  NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: demo-rsvp-ci.firebaseapp.com
+  NEXT_PUBLIC_FIREBASE_PROJECT_ID: demo-rsvp-ci
+  NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: demo-rsvp-ci.appspot.com
+  NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: '123456789'
+  NEXT_PUBLIC_FIREBASE_APP_ID: 1:123456789:web:ci-dummy
+  NEXT_PUBLIC_APP_BASE_URL: http://127.0.0.1:3100
+
+jobs:
+  verify:
+    name: Verify
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm install --global npm@${NPM_VERSION} --no-audit
+      - run: node --version && npm --version
+      - run: npm ci --no-audit
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build:ci
+      - run: npx --no-install playwright install --with-deps chromium
+      - run: npm run test:e2e -- --workers=1
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        if: always()
+        with:
+          name: browser-test-evidence
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
+          if-no-files-found: ignore
+
+  dependency-security:
+    name: Dependency security
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm install --global npm@${NPM_VERSION} --no-audit
+      - run: node --version && npm --version
+      - run: npm ci --no-audit
+      - run: npm run test:security
+      - run: npm run audit:security
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        if: always()
+        with:
+          name: dependency-audit
+          path: .security-audit/*.json
+          include-hidden-files: true
+          retention-days: 14
+          if-no-files-found: error
+
+  firebase-sdk-smoke:
+    name: Firebase SDK smoke
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm install --global npm@${NPM_VERSION} --no-audit
+      - run: node --version && npm --version && java -version
+      - run: npm ci --no-audit
+      - run: npm run test:sdk
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        if: always()
+        with:
+          name: firebase-emulator-evidence
+          path: |
+            firebase-debug.log
+            firestore-debug.log
+            storage-debug.log
+          retention-days: 14
+          if-no-files-found: ignore

@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "name": "braces", "node": "node_modules/braces", "version": "3.0.3",
+      "advisories": ["https://github.com/advisories/GHSA-vfj7-8cjw-p6xm"],
+      "expiresAt": "2026-11-05T00:00:00Z",
+      "reason": "No upstream patched version as of 2026-10-06. Used only by lint glob processing of repository paths; no production or user-supplied patterns. Recheck weekly and remove on upstream repair."
+    },
+    {
+      "name": "micromatch", "node": "node_modules/micromatch", "version": "4.0.8",
+      "advisories": ["https://github.com/advisories/GHSA-vfj7-8cjw-p6xm"],
+      "expiresAt": "2026-11-05T00:00:00Z",
+      "reason": "Development-only transitive braces advisory; same restricted repository-path lint exposure as braces. No upstream braces patch; review weekly."
+    },
+    {
+      "name": "fast-glob", "node": "node_modules/fast-glob", "version": "3.3.1",
+      "advisories": ["https://github.com/advisories/GHSA-vfj7-8cjw-p6xm"],
+      "expiresAt": "2026-11-05T00:00:00Z",
+      "reason": "Development-only transitive braces advisory in Next ESLint globbing. Input is repository-controlled; no production dependency. Review weekly pending upstream fix."
+    },
+    {
+      "name": "@next/eslint-plugin-next", "node": "node_modules/@next/eslint-plugin-next", "version": "16.3.6",
+      "advisories": ["https://github.com/advisories/GHSA-vfj7-8cjw-p6xm"],
+      "expiresAt": "2026-11-05T00:00:00Z",
+      "reason": "Development-only transitive braces advisory in the existing Next ESLint plugin. Downgrading the Next ESLint toolchain is not an appropriate remediation; review upstream repair weekly."
+    },
+    {
+      "name": "eslint-config-next", "node": "node_modules/eslint-config-next", "version": "16.3.6",
+      "advisories": ["https://github.com/advisories/GHSA-vfj7-8cjw-p6xm"],
+      "expiresAt": "2026-11-05T00:00:00Z",
+      "reason": "Development-only transitive braces advisory; keep the config aligned with Next 16.3.6. Exact installed version and advisory are restricted until upstream repair; review weekly."
+    }
+  ]
+}
