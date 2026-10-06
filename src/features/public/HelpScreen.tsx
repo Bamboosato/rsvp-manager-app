@@ -31,11 +31,11 @@ const operationSections = [
   {
     step: "Step3",
     title: "共有URLを送る",
-    body: "URLコピーでプラン名と回答用URLをコピーし、LINEなどで招待者へ送ります。",
+    body: "配信用URLでイベントを選んでコピーし、招待者へ送ります。登録済みのLINE友だちには、LINE配信から直接送れます。",
     points: [
       "コピー内容はプラン名と共有URLです。",
       "アクセスコードを設定した場合は、別途招待者へ伝えます。",
-      "共有URLはプランごとに固定です。対象の招待者にだけ送付してください。"
+      "共有URLごとに選択したイベントが固定されます。対象の招待者にだけ送付してください。"
     ],
     screen: "share" as const
   },
@@ -65,12 +65,16 @@ const operationSections = [
 
 const quickReferenceItems = [
   {
+    title: "アカウント設定",
+    body: "LINE登録用URLやQRコードを共有し、友だちのメモや配信対象を管理します。友だち追加後、入力欄の登録コードを送信すると登録が完了します。"
+  },
+  {
     title: "マイプラン",
-    body: "プラン追加、URLコピー、イベント一覧への移動を行います。"
+    body: "プラン追加、配信用URLのコピー、LINE配信、イベント一覧への移動を行います。"
   },
   {
     title: "プラン詳細",
-    body: "イベントの追加、受付状態の切り替え、出欠サマリーの確認を行います。"
+    body: "イベントの追加、受付状態の切り替え、出欠サマリーの確認、配信用URLの共有とLINE配信を行います。"
   },
   {
     title: "イベント詳細",
@@ -108,7 +112,7 @@ const inviteMessageLines = [
 const manualLinks = [
   {
     title: "管理者向け操作マニュアル",
-    body: "プラン作成、イベント管理、配信用URL共有、出欠内訳、代理対応を詳しく確認できます。",
+    body: "プラン作成、イベント管理、出欠内訳、代理対応の図解です。LINE連携追加前の内容のため、共有URLとLINE配信はこのページの現行案内も確認してください。",
     href: "/manuals/rsvp-hub-admin-manual.pdf"
   },
   {
