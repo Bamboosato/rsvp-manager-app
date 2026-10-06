@@ -81,8 +81,9 @@ jobs:
         with:
           name: dependency-audit
           path: .security-audit/*.json
+          include-hidden-files: true
           retention-days: 14
-          if-no-files-found: ignore
+          if-no-files-found: error
 
   firebase-sdk-smoke:
     name: Firebase SDK smoke
