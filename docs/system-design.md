@@ -1,6 +1,9 @@
 # RSVP Hub MVPシステム設計書
 
 作成日: 2026-06-01
+実装照合日: 2026-10-06（v1.1.0および短縮招待URL対応）
+
+現行の制約・未保証事項は [実装と文書の整合確認](implementation-audit.md) を参照する。
 
 ## 1. 位置づけ
 
@@ -38,6 +41,10 @@ flowchart LR
   api --> auth
   api --> db["Firestore"]
   api --> fcm["Firebase Cloud Messaging"]
+  web --> db
+  api --> line["LINE Messaging API"]
+  line -->|Webhook| api
+  api --> storage["Firebase Storage"]
   admin -. "通知許可/FCM token登録" .-> fcm
   fcm -. "Push通知" .-> admin
 ```
@@ -48,9 +55,11 @@ flowchart LR
 | --- | --- |
 | Web UI | 管理画面、招待者画面、入力状態管理、表示制御 |
 | Firebase Auth | イベント管理者のログイン、ログアウト、パスワードリセット |
-| Vercel API層 | PIN照合、アクセスコード照合、招待者回答保存、通知送信、監査ログ記録 |
-| Firestore | プラン、イベント、招待者、回答、通知token、監査ログの永続化 |
+| Vercel API層 | PIN・アクセスコード照合、招待URL発行、招待者回答保存、LINE登録・配信、通知送信、監査ログ記録 |
+| Firestore | プラン、イベント、招待者、回答、共有コード、LINE関連データ、通知token、監査ログの永続化 |
 | FCM | イベント管理者への回答更新通知 |
+| LINE Messaging API | 登録コード受信、プロフィール取得、返信、管理者指定の招待URL配信 |
+| Firebase Storage | LINEプロフィール画像の保存 |
 
 ### 3.2 正規URL
 
@@ -66,6 +75,8 @@ flowchart LR
 - イベント管理者ログイン、ログアウト
 - イベント管理者ログインパスワードリセットメール送信
 - 管理画面での自分のプラン、イベント、回答の閲覧
+- 管理画面のイベント作成・編集・受付状態変更・無効化（Firestore Web SDK。Rulesで所有者を検証）
+- 管理者プロフィール補完
 - 通知許可状態の表示
 - FCM token登録要求
 
@@ -77,8 +88,11 @@ flowchart LR
 - 招待者回答の保存
 - PINリセット
 - アクセスコードのハッシュ化保存
+- プラン作成・更新・無効化と招待URL発行
+- 管理者の回答代理追加・修正
+- LINE登録情報取得・友だち編集・配信・Webhook処理
 - 通知送信
-- 監査ログ記録
+- API経由の操作に対応する監査ログ記録
 
 理由:
 
@@ -91,19 +105,26 @@ flowchart LR
 
 | パス | 画面 | 認証 |
 | --- | --- | --- |
+| `/` | 公開トップ | 不要 |
+| `/help` | ヘルプ・PDFマニュアルへのリンク | 不要 |
+| `/terms` | 利用規約 | 不要 |
+| `/privacy` | プライバシーポリシー | 不要 |
 | `/login` | イベント管理者ログイン | 未ログイン |
 | `/password-reset` | ログインパスワードリセット | 未ログイン |
 | `/admin/plans` | マイプラン | イベント管理者ログイン必須 |
 | `/admin/account` | アカウント設定、LINE連携、LINE友だち一覧 | イベント管理者ログイン必須 |
 | `/admin/plans/new` | プラン追加 | イベント管理者ログイン必須 |
 | `/admin/plans/{planId}` | プラン詳細、イベント一覧 | イベント管理者ログイン必須 |
+| `/admin/plans/{planId}/edit` | プラン編集 | イベント管理者ログイン必須 |
 | `/admin/plans/{planId}/events/new` | イベント追加 | イベント管理者ログイン必須 |
 | `/admin/plans/{planId}/events/{eventId}` | イベント詳細、出欠内訳 | イベント管理者ログイン必須 |
-| `/invite/{publicToken}` | 招待者アクセス開始 | 不要 |
-| `/invite/{publicToken}/entry` | 招待者本人識別 | 不要 |
-| `/invite/{publicToken}/responses` | 出欠入力 | 不要。ただし招待者セッション必須 |
-| `/invite/{publicToken}/complete` | 出欠入力完了 | 不要。ただし保存完了状態必須 |
-| `/error` | 共通エラー | 不要 |
+| `/admin/plans/{planId}/events/{eventId}/edit` | イベント編集 | イベント管理者ログイン必須 |
+| `/i/{inviteCode}` | 招待者アクセス開始・アクセスコード入力 | 不要 |
+| `/i/{inviteCode}/entry` | 招待者本人識別 | 不要。アクセスコード設定時は通過Cookie必須 |
+| `/i/{inviteCode}/responses` | 出欠入力 | 招待者セッション必須 |
+| `/i/{inviteCode}/complete` | 出欠入力完了 | 保存完了状態（クライアントsessionStorage） |
+
+エラーは各画面内に表示する。独立した `/error` ページと旧 `/invite/...` ページは存在しない。
 
 ## 6. API設計
 
@@ -112,13 +133,10 @@ flowchart LR
 | API | Method | 認証 | 内容 |
 | --- | --- | --- | --- |
 | `/api/admin/plans` | POST | Firebase ID token | プラン作成 |
-| `/api/admin/plans/{planId}` | PATCH | Firebase ID token | プラン更新、アクセスコード変更、解除 |
-| `/api/admin/plans/{planId}/disable` | POST | Firebase ID token | プラン無効化 |
-| `/api/admin/plans/{planId}/events` | POST | Firebase ID token | イベント作成 |
-| `/api/admin/events/{eventId}` | PATCH | Firebase ID token | イベント更新、ステータス変更 |
-| `/api/admin/events/{eventId}/disable` | POST | Firebase ID token | イベント無効化 |
-| `/api/admin/events/{eventId}/responses` | POST | Firebase ID token | 管理者代理回答追加 |
-| `/api/admin/responses/{responseId}` | PATCH | Firebase ID token | 管理者回答修正 |
+| `/api/admin/plans/{planId}` | PATCH/DELETE | Firebase ID token | プラン更新、アクセスコード変更・解除、無効化と共有コード失効 |
+| `/api/admin/plans/{planId}/invite-share-tokens` | POST | Firebase ID token | 選択イベント集合を保持する短縮招待コード発行 |
+| `/api/admin/events/{eventId}/responses` | GET/POST | Firebase ID token | 出欠内訳取得、管理者代理回答追加 |
+| `/api/admin/responses/{responseId}` | PATCH/DELETE | Firebase ID token | 管理者回答修正、回答無効化と監査記録 |
 | `/api/admin/guests/{guestId}/pin-reset` | POST | Firebase ID token | PINリセット |
 | `/api/admin/notification-tokens` | POST | Firebase ID token | FCM token登録 |
 | `/api/admin/line/registration` | GET | Firebase ID token | LINE友だち登録URL、QRコード用情報取得 |
@@ -126,17 +144,20 @@ flowchart LR
 | `/api/admin/line/friends/{friendId}` | PATCH/DELETE | Firebase ID token | LINE友だちのメモ、配信対象、削除 |
 | `/api/admin/line/messages` | POST | Firebase ID token | 選択イベントの配信用URLをLINE友だちへ送信 |
 
+イベント作成・更新・受付状態変更・無効化は `src/features/admin/events/data.ts` からFirestore Web SDKで行う。
+`/api/admin/plans/{planId}/events`、`/api/admin/events/{eventId}`、`.../disable` は実装されていない。
+
 ### 6.2 招待者向けAPI
 
 | API | Method | 認証 | 内容 |
 | --- | --- | --- | --- |
-| `/api/invite/{publicToken}` | GET | 不要 | プラン公開情報取得 |
-| `/api/invite/{publicToken}/password` | POST | 不要 | アクセスコード照合 |
-| `/api/invite/{publicToken}/entry` | POST | 不要 | ニックネーム+PIN照合、招待者セッション発行 |
-| `/api/invite/{publicToken}/responses` | GET | 招待者セッション | 自分の回答取得 |
-| `/api/invite/{publicToken}/responses` | POST | 招待者セッション | 自分の回答保存 |
+| `/api/i/{inviteCode}` | GET | 不要 | コード照合、プラン公開情報取得 |
+| `/api/i/{inviteCode}/password` | POST | 不要 | アクセスコード照合、通過Cookie発行 |
+| `/api/i/{inviteCode}/entry` | POST | アクセスコード設定時は通過Cookie | ニックネーム+PIN照合、招待者セッション発行 |
+| `/api/i/{inviteCode}/responses` | GET | 招待者セッション | 自分の回答取得 |
+| `/api/i/{inviteCode}/responses` | POST | 招待者セッション | 自分の回答保存 |
 
-`GET /api/invite/{publicToken}/responses` は、共有トークンに保存された `eventIds` に含まれる有効イベントを返す。URL作成後に締切済みへ変更されたイベントも返すが、招待者による更新は不可とする。削除/無効化済みイベントは返さない。
+`GET /api/i/{inviteCode}/responses` は、共有コードに保存された `eventIds` に含まれる有効イベントを返す。URL作成後に締切済みへ変更されたイベントも返すが、招待者による更新は不可とする。削除/無効化済みイベントは返さない。旧 `/api/invite/...` APIは提供しない。
 
 ### 6.3 LINE Webhook
 
@@ -155,14 +176,16 @@ flowchart LR
 
 - 招待者はFirebase Authenticationにログインしない。
 - `entry` APIでニックネーム+PIN照合に成功した場合、短期の招待者セッションを発行する。
-- セッションには `planId`、`guestId`、`ownerUid`、有効期限を含める。
-- セッションはHttpOnly Cookieまたは署名付きトークンで扱う。
-- セッション有効期限はMVPでは数時間から1日程度を想定する。
+- セッションには `kind`、`inviteCode`、`planId`、`guestId`、`ownerUid`、`nickname`、有効期限 `exp` を含める。
+- `rsvp_invite_session` とアクセスコード通過用 `rsvp_invite_password` をHMAC-SHA256署名付きHttpOnly Cookieで保持する。SameSite=Lax、本番はSecure、pathは `/` とする。
+- どちらのCookieも発行から24時間有効とし、種別・コード・署名・期限を照合する。
 - セッション期限切れ時は、ニックネーム+PIN入力へ戻す。
+- PINリセットやアクセスコード変更で発行済みCookieを即時失効させる実装はない。新たな照合には新しい値が必要だが、既存Cookieは期限まで利用可能。
+- Cookieは各種別につきブラウザで1つのため、別招待コードで本人識別すると以前のコードのセッションを上書きする。
 
 ## 7. データモデル
 
-MVPではトップレベルコレクションを使い、各ドキュメントに `ownerUid` を持たせる。
+トップレベルコレクションを使い、管理対象データに `ownerUid` を持たせる。管理者プロフィールはドキュメントIDのUIDで分離する。
 
 ```text
 eventAdmins/{uid}
@@ -170,6 +193,7 @@ plans/{planId}
 events/{eventId}
 guests/{guestId}
 responses/{responseId}
+inviteShareTokens/{inviteCode}
 notificationTokens/{tokenId}
 lineRegistrationCodes/{code}
 lineRegistrationCodeOwners/{lineAccountId_ownerUid}
@@ -200,16 +224,16 @@ MVPでは、アプリ管理者がFirebase ConsoleでAuthユーザーを作成す
 | name | string | yes | プラン名 |
 | yearMonth | string | yes | `YYYY-MM` |
 | passwordHash | string/null | no | アクセスコードのハッシュ |
-| publicToken | string | yes | 配信用URL用の推測困難なtoken |
+| publicToken | string | yes | 共有コードから対象プランを照合する内部token |
 | isActive | boolean | yes | 有効状態 |
 | createdAt | timestamp | yes | 作成日時 |
 | updatedAt | timestamp | yes | 更新日時 |
 
 補足:
 
-- 管理画面で配信用URLを継続表示、コピーできるよう、MVPでは `publicToken` を保持する。
+- 共有コードの内部参照先として `publicToken` を保持する。
 - `publicToken` は十分に長いランダム値にし、推測困難にする。
-- `publicToken` は招待者アクセスの入口であり、本人識別はニックネーム+PINで別途行う。
+- 招待者アクセスの入口は `inviteCode`。本人識別はニックネーム+PINで別途行う。
 - `publicToken` をログに不用意に出力しない。
 
 ### 7.3 events
@@ -222,6 +246,7 @@ MVPでは、アプリ管理者がFirebase ConsoleでAuthユーザーを作成す
 | name | string | no | イベント名 |
 | eventDate | string | yes | `YYYY-MM-DD` |
 | timeSlot | string | yes | `AM` / `PM` |
+| timeDetail | string | no | 時間帯補足。40文字以内。旧データ未設定時は空文字として表示 |
 | place | string | yes | 場所 |
 | status | string | yes | `accepting` / `closed` |
 | sortOrder | number | yes | 同一日時内の登録順 |
@@ -254,6 +279,7 @@ MVPでは、アプリ管理者がFirebase ConsoleでAuthユーザーを作成す
 | フィールド | 型 | 必須 | 内容 |
 | --- | --- | --- | --- |
 | responseId | string | yes | 回答ID |
+| isActive | boolean | no | falseは無効化。旧データ未設定時は有効として扱う |
 | planId | string | yes | プランID |
 | eventId | string | yes | イベントID |
 | guestId | string | yes | 招待者ID |
@@ -270,16 +296,22 @@ MVPでは、アプリ管理者がFirebase ConsoleでAuthユーザーを作成す
 
 - `eventId + guestId` は一意に扱う。
 - 招待者保存では、対象イベントが有効かつ受付中であることをAPI層で再検証する。
+- 回答無効化は出欠内訳・集計から除外する。招待者を削除せず、次回の受付中イベント保存で同じ回答IDを再有効化する。
 
 ### 7.6 inviteShareTokens
 
 | フィールド | 型 | 必須 | 内容 |
 | --- | --- | --- | --- |
 | token | string | yes | 共有トークン。ドキュメントIDと同じ値 |
-| publicToken | string | yes | URLパス上のプラン識別token |
+| inviteCode | string | yes | 短縮URLパスの6文字コード。新規ドキュメントID・tokenと同じ |
+| publicToken | string | yes | 内部のプラン照合用token |
 | planId | string | yes | 対象プランID |
 | ownerUid | string | yes | プラン所有者UID |
 | eventIds | string[] | yes | URL発行時に固定した表示対象イベントID |
+| eventId | string/null | no | 先頭イベントIDの補助情報 |
+| participantId | string/null | no | 将来拡張用。新規発行時はnull |
+| expiresAt | timestamp/null | no | 新規発行時はnull。設定値が過去ならコード照合で拒否 |
+| status | string | yes | active / revoked |
 | isActive | boolean | yes | 有効状態 |
 | createdAt | timestamp | yes | 作成日時 |
 | updatedAt | timestamp | yes | 更新日時 |
@@ -288,8 +320,10 @@ MVPでは、アプリ管理者がFirebase ConsoleでAuthユーザーを作成す
 
 制約:
 
-- 招待者向けURLは `/invite/{publicToken}?share={token}` 形式とする。
-- `share` パラメータなし、存在しないトークン、無効化済みトークン、対象プランと一致しないトークンはエラー扱いにする。
+- 招待者向けURLは `/i/{inviteCode}` 形式とする。queryの `share` は使用しない。
+- 新規コードは `ABCDEFGHJKLMNPQRSTUVWXYZ23456789` からランダムに6文字を生成し、作成時に衝突した場合は最大12回試行する。
+- 既存の長い共有トークンも同コレクションのドキュメントIDとして検索可能だが、旧形式のURLを提供する画面/APIはない。
+- 不正コード、存在しないコード、無効化済み・期限切れ・対象プラン不一致はエラー扱いにする。
 - トークン作成時は、指定イベントが対象プラン配下、有効、締切済みではないことをAPI層で再検証する。
 - トークン作成後にイベントの並び順やステータスが変わっても、`eventIds` に保存された対象イベント集合は変更しない。
 - トークン作成後に対象イベントが締切済みになった場合、招待者回答画面には表示するが、保存APIでは更新を拒否する。
@@ -332,8 +366,26 @@ MVPでは、アプリ管理者がFirebase ConsoleでAuthユーザーを作成す
 - PINリセット
 - 管理者代理回答追加
 - 管理者回答修正
+- 管理者回答無効化
 - プラン無効化
-- イベント無効化
+- イベント無効化は現行の直接更新処理では監査ログを作成していない。記録の追加は今後の改善対象とする。
+
+### 7.9 LINE関連データ
+
+以下はサーバー専用で、Firestore Rulesの末尾の拒否規則によりクライアント直接アクセスを許可しない。
+Admin SDK経由のため、APIで所有者またはWebhook署名を検証する。
+
+| コレクション | 主な項目・役割 |
+| --- | --- |
+| `lineRegistrationCodes/{code}` | code、ownerUid、lineAccountId、isActive、createdAt、updatedAt。10文字コードから管理者を解決する。 |
+| `lineRegistrationCodeOwners/{lineAccountId_ownerUid}` | code、ownerUid、lineAccountId、isActive、createdAt、updatedAt。管理者の現行コードを再利用する。 |
+| `lineFriends/{friendId}` | ownerUid、lineAccountId、lineUserId、displayName、pictureUrl、linePictureUrl、pictureStoragePath、memo、isActive、isDeliverable、isFriend、registrationCode、registeredAt、blockedAt、deletedAt、createdAt、updatedAt。 |
+| `lineMessageDeliveries/{deliveryId}` | ownerUid、planId、eventIds、shareToken、friendId、lineUserId、displayName、status（accepted/failed）、responseStatus、errorMessage、createdAt、updatedAt。 |
+
+`friendId` はlineAccountId・ownerUid・lineUserIdのSHA-256で生成し、同じ管理者への再登録で重複を防ぐ。
+プロフィール画像をStorageに保存できない場合も登録を継続する。
+友だち削除は `isActive=false`、`isDeliverable=false` の無効化であり、Storage画像の削除は行わない。
+LINE登録コードと短縮招待コードは別コレクション・別用途であり、出欠の `guestId` とは自動連携しない。
 
 ## 8. インデックス設計
 
@@ -376,11 +428,10 @@ Firestoreで必要になる主な検索条件:
 ### 9.4 publicToken
 
 - publicTokenは推測困難なランダム値にする。
-- 管理画面で配信用URLを表示、コピーするため、MVPでは `plans.publicToken` として保持する。
+- 共有コードの参照先として `plans.publicToken` を保持する。短縮URLへ直接含めない。
 - `publicToken` は `ownerUid` によるアクセス制御でイベント管理者本人だけが閲覧できるようにする。
-- 招待者向けAPIは `publicToken` から対象プランを特定する。
-- 招待者向けAPIは `share` パラメータから `inviteShareTokens` を特定し、対象プランと固定イベント集合を検証する。
-- `share` パラメータなしの `/invite/{publicToken}` は利用不可とする。
+- 招待者向けAPIは `inviteCode` から `inviteShareTokens` を取得し、その内部 `publicToken` からプランを特定する。
+- コードとプランの `planId`、`ownerUid` を照合し、固定イベント集合を検証する。
 - `publicToken` だけで回答編集を許可せず、アクセスコード、ニックネーム、PIN、招待者セッションで追加確認する。
 
 ## 10. 主要処理フロー
@@ -413,8 +464,9 @@ sequenceDiagram
   API->>API: 有効プラン数を検証
   API->>API: publicToken生成/アクセスコードハッシュ化
   API->>DB: plans作成
-  API-->>UI: 配信用URL返却
-  UI-->>A: URL表示/コピー可能
+  API-->>UI: 作成したプラン返却
+  UI-->>A: マイプランへ戻る
+  Note over A,DB: イベント登録後、イベント選択から別APIで共有コードを発行する
 ```
 
 ### 10.3 招待者初回回答
@@ -427,8 +479,8 @@ sequenceDiagram
   participant DB as Firestore
   participant FCM as FCM
   G->>UI: 配信用URLアクセス
-  UI->>API: publicToken/share確認
-  API->>DB: plan/shareToken取得
+  UI->>API: inviteCode確認
+  API->>DB: inviteShareToken取得とプラン照合
   API-->>UI: 公開情報返却
   G->>UI: ニックネーム/PIN/回答入力
   UI->>API: entry + responses保存
@@ -487,7 +539,7 @@ MVPでは再有効化は必須ではない。
 
 | エラー | 表示方針 | ログ |
 | --- | --- | --- |
-| publicToken不正 | 「URLが正しくないか、利用できません。」 | warn |
+| inviteCode不正・失効 | 「配信用URLが正しくありません。」 | API応答。操作エラーは各画面へ表示 |
 | プラン無効 | 「このプランは現在利用できません。」 | info |
 | アクセスコード不一致 | 入力欄近くにエラー表示 | warn |
 | 同一ニックネーム別PIN | 「同じニックネームは既に使用されています。」 | warn |
@@ -499,11 +551,11 @@ MVPでは再有効化は必須ではない。
 
 ### 13.1 token登録
 
-- イベント管理者の初回ログイン直後にブラウザ通知許可を自動要求する。
+- 管理画面でブラウザ・管理者UIDごとに初回の通知許可を自動要求する。localStorageで要求済みを記録し、実際のダイアログ表示はブラウザに依存する。
 - ブラウザ側で自動要求が抑制された場合、または後から許可したい場合は、マイプランの「通知を有効にする」から再試行できる。
 - 許可された場合、FCM tokenを取得し `notificationTokens` に保存する。
 - 同一イベント管理者が複数端末で許可した場合、複数tokenを保持する。
-- 送信失敗したtokenは `isActive = false` に更新する。
+- 送信エラーが登録無効・不正tokenの場合に `isActive = false` に更新する。一時的な送信失敗だけでは無効化しない。
 
 ### 13.2 送信条件
 
@@ -523,6 +575,16 @@ MVPでは再有効化は必須ではない。
 - `public/sw.js` でService Workerを提供する。
 - Service WorkerはアイコンとNext静的アセットをcache-first、画面遷移をnetwork-firstで扱う。
 - PWA用アイコンはSVGに加え、192px、512pxのPNGを提供する。
+- API保存やLINE配信のオフラインキューは提供しない。ローカルホストではService Worker登録解除とキャッシュ削除を行う。
+- Service Worker更新確認とSKIP_WAITINGを行い、新workerへの切り替え時に再読込する。対応環境ではPush受信時にバッジを付け、通知タップや管理画面表示で解除する。
+
+### 13.5 LINE手動配信
+
+- `/api/admin/line/messages` は管理者ID tokenを検証し、プラン所有者、有効状態、選択イベントの所属・有効・受付中、友だちの所有者・有効・配信対象・友だち状態を検証する。
+- 1回のリクエストはイベント1〜100件、友だち1〜50件、挨拶文500文字以内。重複IDを拒否し、空の挨拶文は許可する。
+- リクエストごとに共有コードを発行し、同一URLを各宛先へ送る。本文は編集済み挨拶文とURLを空行で結合する。
+- 送信先別にAPI受付結果を記録し、成功/失敗件数と結果一覧を返す。結果ログの保存失敗は送信結果と分離してサーバーログへ記録する。
+- 自動リトライ・送信要求の重複排除・既読確認は実装していない。
 
 ## 14. 非機能設計
 
@@ -562,8 +624,8 @@ MVPでは再有効化は必須ではない。
 - 招待者クライアントへハッシュ値や他招待者情報を返さない。
 - PINを数値として扱わず、常に4桁文字列として扱う。
 - `○`、`△`、`×` はUI表示値と保存値を分離する。
-- 物理削除は実装しない。
-- 通知許可は初回ログイン直後に自動要求し、失敗時や後からの許可は管理画面のボタンで再試行できるようにする。
+- 通常画面は無効化とする。開発者向け物理削除はREADMEのMaintenanceを参照する。
+- 通知許可は管理画面でブラウザ・管理者UIDごとに初回の自動要求を行い、失敗時や後からの許可は管理画面のボタンで再試行する。
 
 ## 16. テスト設計観点
 
@@ -618,5 +680,5 @@ MVPでは再有効化は必須ではない。
 - イベント管理者自己登録
 - プラン有効期限
 - 定員管理
-- URL再発行
+- 既存招待URLの個別失効・置換（新しい共有コードの追加発行は実装済み）
 - tennis-organizing-app連携
