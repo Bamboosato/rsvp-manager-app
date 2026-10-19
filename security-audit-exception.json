@@ -20,16 +20,16 @@
       "reason": "Development-only transitive braces advisory in Next ESLint globbing. Input is repository-controlled; no production dependency. Review weekly pending upstream fix."
     },
     {
-      "name": "@next/eslint-plugin-next", "node": "node_modules/@next/eslint-plugin-next", "version": "16.3.6",
+      "name": "@next/eslint-plugin-next", "node": "node_modules/@next/eslint-plugin-next", "version": "16.4.0",
       "advisories": ["https://github.com/advisories/GHSA-vfj7-8cjw-p6xm"],
       "expiresAt": "2026-11-05T00:00:00Z",
-      "reason": "Development-only transitive braces advisory in the existing Next ESLint plugin. Downgrading the Next ESLint toolchain is not an appropriate remediation; review upstream repair weekly."
+      "reason": "Rechecked on 2026-10-19: the same development-only braces advisory remains in Next ESLint plugin 16.4.0 through fast-glob and micromatch. Input is repository-controlled lint paths; no production dependency. Review upstream repair weekly."
     },
     {
-      "name": "eslint-config-next", "node": "node_modules/eslint-config-next", "version": "16.3.6",
+      "name": "eslint-config-next", "node": "node_modules/eslint-config-next", "version": "16.4.0",
       "advisories": ["https://github.com/advisories/GHSA-vfj7-8cjw-p6xm"],
       "expiresAt": "2026-11-05T00:00:00Z",
-      "reason": "Development-only transitive braces advisory; keep the config aligned with Next 16.3.6. Exact installed version and advisory are restricted until upstream repair; review weekly."
+      "reason": "Rechecked on 2026-10-19: config 16.4.0 retains the same development-only braces advisory through the Next ESLint plugin. No patched upstream braces version is reported; the suggested Next 14 downgrade is not an appropriate remediation. Review weekly without extending the existing expiry."
     }
   ]
 }
