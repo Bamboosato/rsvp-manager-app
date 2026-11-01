@@ -100,3 +100,35 @@ for (const [label, mutate] of [
 test("non-JSON and truncated report shapes are rejected", () => {
   for (const input of [null, "", {}, [], { vulnerabilities: {} }]) assert.throws(() => validateAuditReport(input));
 });
+
+for (const reverse of [false, true]) {
+  test(`rooted peer cycle resolves every advisory (reverse=${reverse})`, () => {
+    const input = configuration();
+    const via = ['peer', { url, severity: 'high' }];
+    if (reverse) via.reverse();
+    input.full = report(finding('braces', 'high', via), finding('peer', 'high', ['braces']));
+    input.lock.packages['node_modules/peer'] = { version: '1.0.0', dev: true };
+    input.exception.entries.push({ ...input.exception.entries[0], name: 'peer', node: 'node_modules/peer', version: '1.0.0' });
+    assert.equal(evaluateAuditPolicy(input).ok, true);
+    input.full.vulnerabilities.peer.via.push({ url: otherUrl, severity: 'high' });
+    assert.equal(evaluateAuditPolicy(input).ok, false);
+    input.exception.entries.forEach(entry => { entry.advisories = [url, otherUrl]; });
+    assert.equal(evaluateAuditPolicy(input).ok, true);
+  });
+}
+test('rooted self-cycle remains a finding and production still blocks', () => {
+  const input = configuration();
+  input.full.vulnerabilities.braces.via.push('braces');
+  assert.equal(evaluateAuditPolicy(input).ok, true);
+  input.production = input.full;
+  assert.equal(evaluateAuditPolicy(input).ok, false);
+});
+test('multi-node cycle with no root advisory fails closed', () => {
+  assert.throws(() => validateAuditReport(report(finding('a', 'high', ['b']), finding('b', 'high', ['a']))), /Missing advisory/);
+});
+for (const cause of ['missing', { url: 'invalid', severity: 'high' }, { url, severity: 'critical' }]) {
+  test(`invalid edge in rooted cycle is still rejected: ${JSON.stringify(cause)}`, () => {
+    const input = report(finding('a', 'high', ['b', { url, severity: 'high' }]), finding('b', 'high', ['a', cause]));
+    assert.throws(() => validateAuditReport(input));
+  });
+}

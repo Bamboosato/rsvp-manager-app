@@ -2,34 +2,154 @@
   "version": 1,
   "entries": [
     {
-      "name": "braces", "node": "node_modules/braces", "version": "3.0.3",
-      "advisories": ["https://github.com/advisories/GHSA-vfj7-8cjw-p6xm"],
+      "name": "@eslint-community/eslint-utils",
+      "node": "node_modules/@eslint-community/eslint-utils",
+      "version": "4.9.1",
+      "advisories": [
+        "https://github.com/advisories/GHSA-g3hv-75wg-m249"
+      ],
       "expiresAt": "2026-11-05T00:00:00Z",
-      "reason": "No upstream patched version as of 2026-10-06. Used only by lint glob processing of repository paths; no production or user-supplied patterns. Recheck weekly and remove on upstream repair."
+      "reason": "Reviewed 2026-11-02: development-only ESLint dependency on minimatch 3.1.5 (callable CommonJS API). Named-export minimatch 9/10 consumers and production glob are patched separately. The reported optimizationLevel >= 2 firstPhasePreProcess path is absent in minimatch 3; no claim of zero risk. Lint still processes potentially untrusted PR paths on a read-only runner without application secrets and with a job timeout. Temporary compatibility exception only; recheck upstream updates before 2026-11-05. Existing expiry is not extended."
     },
     {
-      "name": "micromatch", "node": "node_modules/micromatch", "version": "4.0.8",
-      "advisories": ["https://github.com/advisories/GHSA-vfj7-8cjw-p6xm"],
+      "name": "@eslint/config-array",
+      "node": "node_modules/@eslint/config-array",
+      "version": "0.21.2",
+      "advisories": [
+        "https://github.com/advisories/GHSA-g3hv-75wg-m249"
+      ],
       "expiresAt": "2026-11-05T00:00:00Z",
-      "reason": "Development-only transitive braces advisory; same restricted repository-path lint exposure as braces. No upstream braces patch; review weekly."
+      "reason": "Reviewed 2026-11-02: development-only ESLint dependency on minimatch 3.1.5 (callable CommonJS API). Named-export minimatch 9/10 consumers and production glob are patched separately. The reported optimizationLevel >= 2 firstPhasePreProcess path is absent in minimatch 3; no claim of zero risk. Lint still processes potentially untrusted PR paths on a read-only runner without application secrets and with a job timeout. Temporary compatibility exception only; recheck upstream updates before 2026-11-05. Existing expiry is not extended."
     },
     {
-      "name": "fast-glob", "node": "node_modules/fast-glob", "version": "3.3.1",
-      "advisories": ["https://github.com/advisories/GHSA-vfj7-8cjw-p6xm"],
+      "name": "@eslint/eslintrc",
+      "node": "node_modules/@eslint/eslintrc",
+      "version": "3.3.7",
+      "advisories": [
+        "https://github.com/advisories/GHSA-g3hv-75wg-m249"
+      ],
       "expiresAt": "2026-11-05T00:00:00Z",
-      "reason": "Development-only transitive braces advisory in Next ESLint globbing. Input is repository-controlled; no production dependency. Review weekly pending upstream fix."
+      "reason": "Reviewed 2026-11-02: development-only ESLint dependency on minimatch 3.1.5 (callable CommonJS API). Named-export minimatch 9/10 consumers and production glob are patched separately. The reported optimizationLevel >= 2 firstPhasePreProcess path is absent in minimatch 3; no claim of zero risk. Lint still processes potentially untrusted PR paths on a read-only runner without application secrets and with a job timeout. Temporary compatibility exception only; recheck upstream updates before 2026-11-05. Existing expiry is not extended."
     },
     {
-      "name": "@next/eslint-plugin-next", "node": "node_modules/@next/eslint-plugin-next", "version": "16.4.0",
-      "advisories": ["https://github.com/advisories/GHSA-vfj7-8cjw-p6xm"],
+      "name": "@next/eslint-plugin-next",
+      "node": "node_modules/@next/eslint-plugin-next",
+      "version": "16.4.0",
+      "advisories": [
+        "https://github.com/advisories/GHSA-g3hv-75wg-m249"
+      ],
       "expiresAt": "2026-11-05T00:00:00Z",
-      "reason": "Rechecked on 2026-10-19: the same development-only braces advisory remains in Next ESLint plugin 16.4.0 through fast-glob and micromatch. Input is repository-controlled lint paths; no production dependency. Review upstream repair weekly."
+      "reason": "Reviewed 2026-11-02: development-only ESLint dependency on minimatch 3.1.5 (callable CommonJS API). Named-export minimatch 9/10 consumers and production glob are patched separately. The reported optimizationLevel >= 2 firstPhasePreProcess path is absent in minimatch 3; no claim of zero risk. Lint still processes potentially untrusted PR paths on a read-only runner without application secrets and with a job timeout. Temporary compatibility exception only; recheck upstream updates before 2026-11-05. Existing expiry is not extended."
     },
     {
-      "name": "eslint-config-next", "node": "node_modules/eslint-config-next", "version": "16.4.0",
-      "advisories": ["https://github.com/advisories/GHSA-vfj7-8cjw-p6xm"],
+      "name": "@typescript-eslint/eslint-plugin",
+      "node": "node_modules/eslint-config-next/node_modules/typescript-eslint/node_modules/@typescript-eslint/eslint-plugin",
+      "version": "8.71.1",
+      "advisories": [
+        "https://github.com/advisories/GHSA-g3hv-75wg-m249"
+      ],
       "expiresAt": "2026-11-05T00:00:00Z",
-      "reason": "Rechecked on 2026-10-19: config 16.4.0 retains the same development-only braces advisory through the Next ESLint plugin. No patched upstream braces version is reported; the suggested Next 14 downgrade is not an appropriate remediation. Review weekly without extending the existing expiry."
+      "reason": "Reviewed 2026-11-02: development-only ESLint dependency on minimatch 3.1.5 (callable CommonJS API). Named-export minimatch 9/10 consumers and production glob are patched separately. The reported optimizationLevel >= 2 firstPhasePreProcess path is absent in minimatch 3; no claim of zero risk. Lint still processes potentially untrusted PR paths on a read-only runner without application secrets and with a job timeout. Temporary compatibility exception only; recheck upstream updates before 2026-11-05. Existing expiry is not extended."
+    },
+    {
+      "name": "@typescript-eslint/parser",
+      "node": "node_modules/eslint-config-next/node_modules/typescript-eslint/node_modules/@typescript-eslint/parser",
+      "version": "8.71.1",
+      "advisories": [
+        "https://github.com/advisories/GHSA-g3hv-75wg-m249"
+      ],
+      "expiresAt": "2026-11-05T00:00:00Z",
+      "reason": "Reviewed 2026-11-02: development-only ESLint dependency on minimatch 3.1.5 (callable CommonJS API). Named-export minimatch 9/10 consumers and production glob are patched separately. The reported optimizationLevel >= 2 firstPhasePreProcess path is absent in minimatch 3; no claim of zero risk. Lint still processes potentially untrusted PR paths on a read-only runner without application secrets and with a job timeout. Temporary compatibility exception only; recheck upstream updates before 2026-11-05. Existing expiry is not extended."
+    },
+    {
+      "name": "@typescript-eslint/type-utils",
+      "node": "node_modules/eslint-config-next/node_modules/typescript-eslint/node_modules/@typescript-eslint/eslint-plugin/node_modules/@typescript-eslint/type-utils",
+      "version": "8.71.1",
+      "advisories": [
+        "https://github.com/advisories/GHSA-g3hv-75wg-m249"
+      ],
+      "expiresAt": "2026-11-05T00:00:00Z",
+      "reason": "Reviewed 2026-11-02: development-only ESLint dependency on minimatch 3.1.5 (callable CommonJS API). Named-export minimatch 9/10 consumers and production glob are patched separately. The reported optimizationLevel >= 2 firstPhasePreProcess path is absent in minimatch 3; no claim of zero risk. Lint still processes potentially untrusted PR paths on a read-only runner without application secrets and with a job timeout. Temporary compatibility exception only; recheck upstream updates before 2026-11-05. Existing expiry is not extended."
+    },
+    {
+      "name": "@typescript-eslint/utils",
+      "node": "node_modules/eslint-config-next/node_modules/typescript-eslint/node_modules/@typescript-eslint/utils",
+      "version": "8.71.1",
+      "advisories": [
+        "https://github.com/advisories/GHSA-g3hv-75wg-m249"
+      ],
+      "expiresAt": "2026-11-05T00:00:00Z",
+      "reason": "Reviewed 2026-11-02: development-only ESLint dependency on minimatch 3.1.5 (callable CommonJS API). Named-export minimatch 9/10 consumers and production glob are patched separately. The reported optimizationLevel >= 2 firstPhasePreProcess path is absent in minimatch 3; no claim of zero risk. Lint still processes potentially untrusted PR paths on a read-only runner without application secrets and with a job timeout. Temporary compatibility exception only; recheck upstream updates before 2026-11-05. Existing expiry is not extended."
+    },
+    {
+      "name": "eslint",
+      "node": "node_modules/eslint",
+      "version": "9.39.4",
+      "advisories": [
+        "https://github.com/advisories/GHSA-g3hv-75wg-m249"
+      ],
+      "expiresAt": "2026-11-05T00:00:00Z",
+      "reason": "Reviewed 2026-11-02: development-only ESLint dependency on minimatch 3.1.5 (callable CommonJS API). Named-export minimatch 9/10 consumers and production glob are patched separately. The reported optimizationLevel >= 2 firstPhasePreProcess path is absent in minimatch 3; no claim of zero risk. Lint still processes potentially untrusted PR paths on a read-only runner without application secrets and with a job timeout. Temporary compatibility exception only; recheck upstream updates before 2026-11-05. Existing expiry is not extended."
+    },
+    {
+      "name": "eslint-config-next",
+      "node": "node_modules/eslint-config-next",
+      "version": "16.4.0",
+      "advisories": [
+        "https://github.com/advisories/GHSA-g3hv-75wg-m249"
+      ],
+      "expiresAt": "2026-11-05T00:00:00Z",
+      "reason": "Reviewed 2026-11-02: development-only ESLint dependency on minimatch 3.1.5 (callable CommonJS API). Named-export minimatch 9/10 consumers and production glob are patched separately. The reported optimizationLevel >= 2 firstPhasePreProcess path is absent in minimatch 3; no claim of zero risk. Lint still processes potentially untrusted PR paths on a read-only runner without application secrets and with a job timeout. Temporary compatibility exception only; recheck upstream updates before 2026-11-05. Existing expiry is not extended."
+    },
+    {
+      "name": "eslint-plugin-import",
+      "node": "node_modules/eslint-config-next/node_modules/eslint-plugin-import",
+      "version": "2.32.0",
+      "advisories": [
+        "https://github.com/advisories/GHSA-g3hv-75wg-m249"
+      ],
+      "expiresAt": "2026-11-05T00:00:00Z",
+      "reason": "Reviewed 2026-11-02: development-only ESLint dependency on minimatch 3.1.5 (callable CommonJS API). Named-export minimatch 9/10 consumers and production glob are patched separately. The reported optimizationLevel >= 2 firstPhasePreProcess path is absent in minimatch 3; no claim of zero risk. Lint still processes potentially untrusted PR paths on a read-only runner without application secrets and with a job timeout. Temporary compatibility exception only; recheck upstream updates before 2026-11-05. Existing expiry is not extended."
+    },
+    {
+      "name": "eslint-plugin-jsx-a11y",
+      "node": "node_modules/eslint-config-next/node_modules/eslint-plugin-jsx-a11y",
+      "version": "6.10.2",
+      "advisories": [
+        "https://github.com/advisories/GHSA-g3hv-75wg-m249"
+      ],
+      "expiresAt": "2026-11-05T00:00:00Z",
+      "reason": "Reviewed 2026-11-02: development-only ESLint dependency on minimatch 3.1.5 (callable CommonJS API). Named-export minimatch 9/10 consumers and production glob are patched separately. The reported optimizationLevel >= 2 firstPhasePreProcess path is absent in minimatch 3; no claim of zero risk. Lint still processes potentially untrusted PR paths on a read-only runner without application secrets and with a job timeout. Temporary compatibility exception only; recheck upstream updates before 2026-11-05. Existing expiry is not extended."
+    },
+    {
+      "name": "eslint-plugin-react",
+      "node": "node_modules/eslint-config-next/node_modules/eslint-plugin-react",
+      "version": "7.37.5",
+      "advisories": [
+        "https://github.com/advisories/GHSA-g3hv-75wg-m249"
+      ],
+      "expiresAt": "2026-11-05T00:00:00Z",
+      "reason": "Reviewed 2026-11-02: development-only ESLint dependency on minimatch 3.1.5 (callable CommonJS API). Named-export minimatch 9/10 consumers and production glob are patched separately. The reported optimizationLevel >= 2 firstPhasePreProcess path is absent in minimatch 3; no claim of zero risk. Lint still processes potentially untrusted PR paths on a read-only runner without application secrets and with a job timeout. Temporary compatibility exception only; recheck upstream updates before 2026-11-05. Existing expiry is not extended."
+    },
+    {
+      "name": "minimatch",
+      "node": "node_modules/minimatch",
+      "version": "3.1.5",
+      "advisories": [
+        "https://github.com/advisories/GHSA-g3hv-75wg-m249"
+      ],
+      "expiresAt": "2026-11-05T00:00:00Z",
+      "reason": "Reviewed 2026-11-02: development-only ESLint dependency on minimatch 3.1.5 (callable CommonJS API). Named-export minimatch 9/10 consumers and production glob are patched separately. The reported optimizationLevel >= 2 firstPhasePreProcess path is absent in minimatch 3; no claim of zero risk. Lint still processes potentially untrusted PR paths on a read-only runner without application secrets and with a job timeout. Temporary compatibility exception only; recheck upstream updates before 2026-11-05. Existing expiry is not extended."
+    },
+    {
+      "name": "typescript-eslint",
+      "node": "node_modules/eslint-config-next/node_modules/typescript-eslint",
+      "version": "8.71.1",
+      "advisories": [
+        "https://github.com/advisories/GHSA-g3hv-75wg-m249"
+      ],
+      "expiresAt": "2026-11-05T00:00:00Z",
+      "reason": "Reviewed 2026-11-02: development-only ESLint dependency on minimatch 3.1.5 (callable CommonJS API). Named-export minimatch 9/10 consumers and production glob are patched separately. The reported optimizationLevel >= 2 firstPhasePreProcess path is absent in minimatch 3; no claim of zero risk. Lint still processes potentially untrusted PR paths on a read-only runner without application secrets and with a job timeout. Temporary compatibility exception only; recheck upstream updates before 2026-11-05. Existing expiry is not extended."
     }
   ]
 }

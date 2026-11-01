@@ -32,29 +32,36 @@ export function validateAuditReport(report) {
   return counts.total;
 }
 
-function collectAdvisories(name, findings, parents = new Set()) {
-  if (parents.has(name) || !isRecord(findings[name])) {
-    throw new Error(`Missing or cyclic advisory dependency: ${name}`);
-  }
-  const next = new Set([...parents, name]);
+function collectAdvisories(name, findings) {
+  // npm includes peer-dependency cycles. Traverse each reachable node once,
+  // but require the complete graph to resolve to at least one real advisory.
+  const pending = [name];
+  const visited = new Set();
   const urls = new Set();
-  if (!Array.isArray(findings[name].via) || findings[name].via.length === 0) {
-    throw new Error(`Invalid advisory dependency: ${name}`);
-  }
-  for (const cause of findings[name].via) {
-    if (typeof cause === "string") {
-      if (severities.indexOf(findings[cause]?.severity) > severities.indexOf(findings[name].severity)) {
-        throw new Error(`Inconsistent advisory severity: ${name}`);
+  while (pending.length) {
+    const current = pending.pop();
+    if (visited.has(current)) continue;
+    if (!isRecord(findings[current])) throw new Error(`Missing advisory dependency: ${current}`);
+    visited.add(current);
+    const finding = findings[current];
+    if (!severities.includes(finding.severity) || !Array.isArray(finding.via) || finding.via.length === 0) {
+      throw new Error(`Invalid advisory dependency: ${current}`);
+    }
+    for (const cause of finding.via) {
+      if (typeof cause === "string") {
+        if (severities.indexOf(findings[cause]?.severity) > severities.indexOf(finding.severity)) {
+          throw new Error(`Inconsistent advisory severity: ${current}`);
+        }
+        pending.push(cause);
+      } else if (isRecord(cause) && typeof cause.url === "string" && advisoryUrl.test(cause.url) &&
+                 severities.includes(cause.severity)) {
+        if (severities.indexOf(cause.severity) > severities.indexOf(finding.severity)) {
+          throw new Error(`Inconsistent advisory severity: ${current}`);
+        }
+        urls.add(cause.url);
+      } else {
+        throw new Error(`Invalid advisory: ${current}`);
       }
-      for (const url of collectAdvisories(cause, findings, next)) urls.add(url);
-    } else if (isRecord(cause) && typeof cause.url === "string" && advisoryUrl.test(cause.url) &&
-               severities.includes(cause.severity)) {
-      if (severities.indexOf(cause.severity) > severities.indexOf(findings[name].severity)) {
-        throw new Error(`Inconsistent advisory severity: ${name}`);
-      }
-      urls.add(cause.url);
-    } else {
-      throw new Error(`Invalid advisory: ${name}`);
     }
   }
   if (urls.size === 0) throw new Error(`Missing advisory: ${name}`);
