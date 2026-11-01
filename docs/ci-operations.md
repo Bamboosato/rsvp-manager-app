@@ -57,3 +57,16 @@ CI 用ビルドは `npm run build:ci`、本番用ビルドは通常の `npm run 
 導入 PR の正常実行を確認してから、main の保護設定に `Verify`、`Dependency security`、`Firebase SDK smoke` を GitHub Actions の必須チェックとして登録する。
 既存の保護やチェックがある場合は保持し、最新 main への追従を要求する。設定状態と実行結果は導入完了時に記録する。
 ワークフローを含まない古い PR は、この CI を含む main に追従してから再検証する必要がある。
+
+## 2026-11-02 の監査修正
+
+React 19.3.1 / React DOM 19.3.1 の更新に加え、監査の循環参照処理と新たな依存脆弱性を修正した。
+
+- npm audit の `via` は ESLint とその peer 依存の間で循環する場合がある。各起点から到達可能なノードを一度ずつ探索し、すべての直接アドバイザリを集める。根拠のない循環、欠損参照、不正 URL・重大度・件数は引き続き失敗する。本番依存は例外で許可しない。
+- `glob` を14.0.2へ固定し、[GHSA-3g3m-2fjr-6pw4](https://github.com/advisories/GHSA-3g3m-2fjr-6pw4) の修正版を使う。`rimraf` のファイル削除と glob の検索・中断拒否を検証した。
+- `minimatch` の9/10系を11.0.1へ置き換え、[GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249) に対応する。名前付き API を使う glob / TypeScript ESLint の経路が対象。旧 callable CommonJS API を必要とする3系は一括置換しない。
+- 本番依存の検出は6件から0件へ減少した。全依存の検出15件は開発用 ESLint 経路の minimatch 3.1.5 と、その影響を受けるラッパーである。パッケージ名・lockfile node・版・GHSA を個別に固定した期限付き例外として記録する。アドバイザリの影響範囲は3系も含むため、脆弱性0件とは扱わない。
+
+3.1.5 の実装には、当該アドバイザリが説明する `optimizationLevel >= 2` の `firstPhasePreProcess` / `secondPhasePreProcess` 処理がないことを確認した。ただし、PR の設定・パスも信頼済みとは限らず、lint のリソース消費リスクを否定するものではない。既存の読み取り権限・アプリ秘密情報なし・ジョブタイムアウトを維持する。
+
+従来の braces 用例外は今回の監査結果には含まれず、現行の個別評価へ置き換えた。期限は従来どおり **2026-11-05 00:00 UTC（09:00 JST）**。延長していない。期限到達・新しい GHSA・対象版や経路の変更・本番への移動は再び監査を失敗させる。期限前に互換性を保つ上流の更新を再確認し、解消した例外を削除する。
