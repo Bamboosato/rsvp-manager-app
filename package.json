@@ -21,7 +21,7 @@
     "maintenance:delete-plan": "node scripts/maintenance/delete-plan.mjs"
   },
   "dependencies": {
-    "@opentelemetry/api": "^1.9.1",
+    "@opentelemetry/api": "^1.10.0",
     "firebase": "12.14.0",
     "firebase-admin": "^14.5.0",
     "next": "16.4.2",
